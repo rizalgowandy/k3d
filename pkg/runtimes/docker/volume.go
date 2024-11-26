@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,8 @@ import (
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/volume"
-	runtimeErrors "github.com/rancher/k3d/v5/pkg/runtimes/errors"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	runtimeErrors "github.com/k3d-io/k3d/v5/pkg/runtimes/errors"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // CreateVolume creates a new named volume
@@ -41,7 +41,7 @@ func (d Docker) CreateVolume(ctx context.Context, name string, labels map[string
 	defer docker.Close()
 
 	// (1) create volume
-	volumeCreateOptions := volume.VolumeCreateBody{
+	volumeCreateOptions := volume.CreateOptions{
 		Name:       name,
 		Labels:     labels,
 		Driver:     "local", // TODO: allow setting driver + opts
@@ -104,7 +104,7 @@ func (d Docker) GetVolume(name string) (string, error) {
 
 	filters := filters.NewArgs()
 	filters.Add("name", fmt.Sprintf("^%s$", name))
-	volumeList, err := docker.VolumeList(ctx, filters)
+	volumeList, err := docker.VolumeList(ctx, volume.ListOptions{Filters: filters})
 	if err != nil {
 		return "", fmt.Errorf("docker failed to list volumes: %w", err)
 	}
@@ -113,7 +113,6 @@ func (d Docker) GetVolume(name string) (string, error) {
 	}
 
 	return volumeList.Volumes[0].Name, nil
-
 }
 
 func (d Docker) GetVolumesByLabel(ctx context.Context, labels map[string]string) ([]string, error) {
@@ -134,7 +133,7 @@ func (d Docker) GetVolumesByLabel(ctx context.Context, labels map[string]string)
 		filters.Add("label", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	volumeList, err := docker.VolumeList(ctx, filters)
+	volumeList, err := docker.VolumeList(ctx, volume.ListOptions{Filters: filters})
 	if err != nil {
 		return volumes, fmt.Errorf("docker failed to list volumes: %w", err)
 	}
@@ -144,5 +143,4 @@ func (d Docker) GetVolumesByLabel(ctx context.Context, labels map[string]string)
 	}
 
 	return volumes, nil
-
 }

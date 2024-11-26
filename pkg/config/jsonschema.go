@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ import (
 
 	"github.com/xeipuuv/gojsonschema"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 // ValidateSchemaFile takes a filepath, reads the file and validates it against a JSON schema
@@ -54,7 +54,6 @@ func ValidateSchemaFile(filepath string, schema []byte) error {
 
 // ValidateSchema validates a YAML construct (non-struct representation) against a JSON Schema
 func ValidateSchema(content interface{}, schemaJSON []byte) error {
-
 	contentYaml, err := yaml.Marshal(content)
 	if err != nil {
 		return err
@@ -65,7 +64,6 @@ func ValidateSchema(content interface{}, schemaJSON []byte) error {
 	}
 
 	return ValidateSchemaJSON(contentJSON, schemaJSON)
-
 }
 
 func ValidateSchemaJSON(contentJSON []byte, schemaJSON []byte) error {

@@ -8,12 +8,12 @@ endif
 
 # Go options
 GO        ?= go
-PKG       := $(shell go mod vendor)
+PKG       := $(shell GOWORK=off go mod vendor)
 TAGS      :=
 TESTS     := .
 TESTFLAGS :=
-LDFLAGS   := -w -s -X github.com/rancher/k3d/tools/version.Version=${GIT_TAG}
-GOFLAGS   :=
+LDFLAGS   := -w -s -X github.com/k3d-io/k3d/tools/version.Version=${GIT_TAG}
+GOFLAGS   := -mod readonly
 BINDIR    := $(CURDIR)/bin
 BINARIES  := k3d-tools
 
@@ -42,7 +42,7 @@ LINT_DIRS := $(DIRS) $(foreach dir,$(REC_DIRS),$(dir)/...)
 all: clean fmt check build
 
 build:
-	$(GO) build -i $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o '$(BINDIR)/$(BINARIES)'
+	$(GO) build $(GOFLAGS) -tags '$(TAGS)' -ldflags '$(LDFLAGS)' -o '$(BINDIR)/$(BINARIES)'
 
 clean:
 	@rm -rf $(BINDIR) _dist/

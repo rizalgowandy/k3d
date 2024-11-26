@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,12 +32,10 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	"github.com/rancher/k3d/v5/pkg/types/fixes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 func TestTranslateNodeToContainer(t *testing.T) {
-
 	inputNode := &k3d.Node{
 		Name:    "test",
 		Role:    k3d.ServerRole,
@@ -76,12 +74,14 @@ func TestTranslateNodeToContainer(t *testing.T) {
 			},
 		},
 		HostConfig: container.HostConfig{
-			Binds: []string{"/test:/tmp/test"},
+			Binds:       []string{"/test:/tmp/test"},
+			NetworkMode: "bridge",
 			RestartPolicy: container.RestartPolicy{
 				Name: "unless-stopped",
 			},
 			Init:       &init,
 			Privileged: true,
+			UsernsMode: "host",
 			Tmpfs:      map[string]string{"/run": "", "/var/run": ""},
 			PortBindings: nat.PortMap{
 				"6443/tcp": {
@@ -99,18 +99,14 @@ func TestTranslateNodeToContainer(t *testing.T) {
 		},
 	}
 
-	// TODO: // FIXME: FixCgroupV2 - to be removed when fixed upstream
-	if fixes.FixEnabledAny() {
-		expectedRepresentation.ContainerConfig.Entrypoint = []string{"/bin/k3d-entrypoint.sh"}
-	}
-
 	actualRepresentation, err := TranslateNodeToContainer(inputNode)
 	if err != nil {
 		t.Error(err)
 	}
 
+	actualRepresentation.ContainerConfig.Entrypoint = expectedRepresentation.ContainerConfig.Entrypoint // may change depending on the enabled fixes, so we ignore it here
+
 	if diff := deep.Equal(actualRepresentation, expectedRepresentation); diff != nil {
 		t.Errorf("Actual representation\n%+v\ndoes not match expected representation\n%+v\nDiff:\n%+v", actualRepresentation, expectedRepresentation, diff)
 	}
-
 }

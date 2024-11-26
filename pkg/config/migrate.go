@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +25,10 @@ package config
 import (
 	"fmt"
 
-	types "github.com/rancher/k3d/v5/pkg/config/types"
+	types "github.com/k3d-io/k3d/v5/pkg/config/types"
 )
 
 func Migrate(config types.Config, targetVersion string) (types.Config, error) {
-
 	migration, ok := getMigrations(targetVersion)[config.GetAPIVersion()]
 	if !ok {
 		return nil, fmt.Errorf("no migration possible from '%s' to '%s'", config.GetAPIVersion(), targetVersion)
@@ -50,5 +49,4 @@ func Migrate(config types.Config, targetVersion string) (types.Config, error) {
 	}
 
 	return cfg, err
-
 }

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,14 +28,15 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/rancher/k3d/v5/pkg/config/types"
-	config "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	"github.com/rancher/k3d/v5/pkg/util"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
+
+	"github.com/k3d-io/k3d/v5/pkg/config/types"
+	config "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/util"
 )
 
 var (
@@ -101,7 +102,6 @@ func TransformPorts(ctx context.Context, runtime runtimes.Runtime, cluster *k3d.
 				return fmt.Errorf("error adding port mappings: unknown suffix %s", suffix)
 			}
 		}
-
 	}
 
 	// print generated loadbalancer config if exists
@@ -118,16 +118,11 @@ func TransformPorts(ctx context.Context, runtime runtimes.Runtime, cluster *k3d.
 }
 
 func addPortMappings(node *k3d.Node, portmappings []nat.PortMapping) error {
-
 	if node.Ports == nil {
 		node.Ports = nat.PortMap{}
 	}
 	for _, pm := range portmappings {
-		if _, exists := node.Ports[pm.Port]; exists {
-			node.Ports[pm.Port] = append(node.Ports[pm.Port], pm.Binding)
-		} else {
-			node.Ports[pm.Port] = []nat.PortBinding{pm.Binding}
-		}
+		node.Ports[pm.Port] = append(node.Ports[pm.Port], pm.Binding)
 	}
 	return nil
 }

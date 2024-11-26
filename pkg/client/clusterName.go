@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // HostnameRegexp as per RFC 1123
@@ -47,7 +47,6 @@ func CheckName(name string) error {
 
 // ValidateHostname ensures that a cluster name is also a valid host name according to RFC 1123.
 func ValidateHostname(name string) error {
-
 	if len(name) == 0 {
 		return fmt.Errorf("No name provided")
 	}

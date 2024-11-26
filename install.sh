@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 APP_NAME="k3d"
-REPO_URL="https://github.com/rancher/k3d"
+REPO_URL="https://github.com/k3d-io/k3d"
 
 : ${USE_SUDO:="true"}
 : ${K3D_INSTALL_DIR:="/usr/local/bin"}
@@ -27,7 +27,15 @@ initOS() {
 
   case "$OS" in
     # Minimalist GNU for Windows
-    mingw*) OS='windows';;
+    mingw*) 
+      OS="windows"
+      USE_SUDO="false"
+      if [[ ! -d "$K3D_INSTALL_DIR" ]]; then
+        # mingw bash that ships with Git for Windows doesn't have /usr/local/bin but ~/bin is first entry in the path
+        mkdir -p ~/bin
+        K3D_INSTALL_DIR=~/bin
+      fi
+      ;;
   esac
 }
 
@@ -40,6 +48,21 @@ runAsRoot() {
   fi
 
   $CMD
+}
+
+# scurl invokes `curl` with secure defaults
+scurl() {
+  # - `--proto =https` requires that all URLs use HTTPS. Attempts to call http://
+  #   URLs will fail.
+  # - `--tlsv1.2` ensures that at least TLS v1.2 is used, disabling less secure
+  #   prior TLS versions.
+  # - `--fail` ensures that the command fails if HTTP response is not 2xx.
+  # - `--show-error` causes curl to output error messages when it fails (when
+  #   also invoked with -s|--silent).
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "Executing: curl --proto \"=https\" --tlsv1.2 --fail --show-error $*" >&2
+  fi
+  curl --proto "=https" --tlsv1.2 --fail --show-error "$@"
 }
 
 # verifySupported checks that the os/arch combination is supported for
@@ -84,9 +107,16 @@ checkTagProvided() {
 checkLatestVersion() {
   local latest_release_url="$REPO_URL/releases/latest"
   if type "curl" > /dev/null; then
-    TAG=$(curl -Ls -o /dev/null -w %{url_effective} $latest_release_url | grep -oE "[^/]+$" )
+    TAG=$(scurl -Ls -o /dev/null -w %{url_effective} $latest_release_url | grep -oE "[^/]+$" )
   elif type "wget" > /dev/null; then
     TAG=$(wget $latest_release_url --server-response -O /dev/null 2>&1 | awk '/^\s*Location: /{DEST=$2} END{ print DEST}' | grep -oE "[^/]+$")
+  fi
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "Resolved latest tag: <$TAG>" >&2
+  fi
+  if [[ "$TAG" == "latest" ]]; then
+    echo "Failed to get the latest version for $REPO_URL"
+    exit 1
   fi
 }
 
@@ -95,10 +125,13 @@ checkLatestVersion() {
 downloadFile() {
   K3D_DIST="k3d-$OS-$ARCH"
   DOWNLOAD_URL="$REPO_URL/releases/download/$TAG/$K3D_DIST"
+  if [[ "$OS" == "windows" ]]; then
+    DOWNLOAD_URL=${DOWNLOAD_URL}.exe
+  fi
   K3D_TMP_ROOT="$(mktemp -dt k3d-binary-XXXXXX)"
   K3D_TMP_FILE="$K3D_TMP_ROOT/$K3D_DIST"
   if type "curl" > /dev/null; then
-    curl -SsL "$DOWNLOAD_URL" -o "$K3D_TMP_FILE"
+    scurl -sL "$DOWNLOAD_URL" -o "$K3D_TMP_FILE"
   elif type "wget" > /dev/null; then
     wget -q -O "$K3D_TMP_FILE" "$DOWNLOAD_URL"
   fi

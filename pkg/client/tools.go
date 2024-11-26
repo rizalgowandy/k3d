@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,15 +34,14 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // ImageImportIntoClusterMulti starts up a k3d tools container for the selected cluster and uses it to export
 // images from the runtime to import them into the nodes of the selected cluster
 func ImageImportIntoClusterMulti(ctx context.Context, runtime runtimes.Runtime, images []string, cluster *k3d.Cluster, opts k3d.ImageImportOpts) error {
-
 	// stdin case
 	if len(images) == 1 && images[0] == "-" {
 		err := loadImageFromStream(ctx, runtime, os.Stdin, cluster, []string{"stdin"})
@@ -140,7 +139,7 @@ func importWithToolsNode(ctx context.Context, runtime runtimes.Runtime, cluster 
 				importWaitgroup.Add(1)
 				go func(node *k3d.Node, wg *sync.WaitGroup, tarPath string) {
 					l.Log().Infof("Importing images from tarball '%s' into node '%s'...", tarPath, node.Name)
-					if err := runtime.ExecInNode(ctx, node, []string{"ctr", "image", "import", tarPath}); err != nil {
+					if err := runtime.ExecInNode(ctx, node, []string{"ctr", "image", "import", "--all-platforms", tarPath}); err != nil {
 						l.Log().Errorf("failed to import images in node '%s': %v", node.Name, err)
 					}
 					wg.Done()
@@ -181,7 +180,6 @@ func importWithStream(ctx context.Context, runtime runtimes.Runtime, cluster *k3
 			return fmt.Errorf("could not load image to cluster from stream %s: %w", imagesFromRuntime, err)
 		}
 		// load the images directly into the nodes
-
 	}
 
 	if len(imagesFromTar) > 0 {
@@ -241,7 +239,7 @@ func loadImageFromStream(ctx context.Context, runtime runtimes.Runtime, stream i
 			pipeReader := pipeReaders[pipeId]
 			errorGroup.Go(func() error {
 				l.Log().Infof("Importing images '%s' into node '%s'...", imageNames, node.Name)
-				if err := runtime.ExecInNodeWithStdin(ctx, node, []string{"ctr", "image", "import", "-"}, pipeReader); err != nil {
+				if err := runtime.ExecInNodeWithStdin(ctx, node, []string{"ctr", "image", "import", "--all-platforms", "-"}, pipeReader); err != nil {
 					return fmt.Errorf("failed to import images in node '%s': %v", node.Name, err)
 				}
 				return nil
@@ -310,12 +308,16 @@ func isFile(image string) bool {
 }
 
 func dockerSpecialImageNameEqual(requestedImageName string, runtimeImageName string) bool {
-	if strings.HasPrefix(requestedImageName, "docker.io/") {
-		return dockerSpecialImageNameEqual(strings.TrimPrefix(requestedImageName, "docker.io/"), runtimeImageName)
+	prefixes := []string{
+		"docker.io/library/",
+		"docker.io/",
+		"library/",
 	}
 
-	if strings.HasPrefix(requestedImageName, "library/") {
-		return imageNamesEqual(strings.TrimPrefix(requestedImageName, "library/"), runtimeImageName)
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(requestedImageName, prefix) {
+			return imageNamesEqual(strings.TrimPrefix(requestedImageName, prefix), runtimeImageName)
+		}
 	}
 
 	return false
@@ -393,7 +395,6 @@ func EnsureToolsNode(ctx context.Context, runtime runtimes.Runtime, cluster *k3d
 	var toolsNode *k3d.Node
 	toolsNode, err := runtime.GetNode(ctx, &k3d.Node{Name: fmt.Sprintf("%s-%s-tools", k3d.DefaultObjectNamePrefix, cluster.Name)})
 	if err != nil || toolsNode == nil {
-
 		// Get more info on the cluster, if required
 		var imageVolume string
 		if cluster.Network.Name == "" || cluster.ImageVolume == "" {
@@ -445,5 +446,4 @@ func EnsureToolsNode(ctx context.Context, runtime runtimes.Runtime, cluster *k3d
 	}
 
 	return toolsNode, err
-
 }

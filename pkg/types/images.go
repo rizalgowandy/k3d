@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,18 +26,18 @@ import (
 	"os"
 	"strings"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/version"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/version"
 )
 
 // DefaultK3sImageRepo specifies the default image repository for the used k3s image
 const DefaultK3sImageRepo = "docker.io/rancher/k3s"
 
 // DefaultLBImageRepo defines the default cluster load balancer image
-const DefaultLBImageRepo = "docker.io/rancher/k3d-proxy"
+const DefaultLBImageRepo = "ghcr.io/k3d-io/k3d-proxy"
 
 // DefaultToolsImageRepo defines the default image used for the tools container
-const DefaultToolsImageRepo = "docker.io/rancher/k3d-tools"
+const DefaultToolsImageRepo = "ghcr.io/k3d-io/k3d-tools"
 
 // DefaultRegistryImageRepo defines the default image used for the k3d-managed registry
 const DefaultRegistryImageRepo = "docker.io/library/registry"

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,9 +27,11 @@ import (
 	"strings"
 	"testing"
 
-	conf "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	"github.com/rancher/k3d/v5/pkg/types/k3s"
+	"github.com/stretchr/testify/require"
+
+	conf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	"github.com/k3d-io/k3d/v5/pkg/types/k3s"
 	"github.com/spf13/viper"
 	"gotest.tools/assert"
 )
@@ -48,7 +50,7 @@ func TestProcessClusterConfig(t *testing.T) {
 
 	t.Logf("\n========== Read Config and transform to cluster ==========\n%+v\n=================================\n", cfg)
 
-	clusterCfg, err := TransformSimpleToClusterConfig(context.Background(), runtimes.Docker, cfg.(conf.SimpleConfig))
+	clusterCfg, err := TransformSimpleToClusterConfig(context.Background(), runtimes.Docker, cfg.(conf.SimpleConfig), cfgFile)
 	if err != nil {
 		t.Error(err)
 	}
@@ -59,6 +61,7 @@ func TestProcessClusterConfig(t *testing.T) {
 	t.Logf("\n========== Process Cluster Config (non-host network) ==========\n%+v\n=================================\n", cfg)
 
 	clusterCfg, err = ProcessClusterConfig(*clusterCfg)
+	require.NoError(t, err)
 	assert.Assert(t, clusterCfg.ClusterCreateOpts.DisableLoadBalancer == false, "The load balancer should be enabled")
 
 	for _, v := range clusterCfg.Cluster.Nodes[0].Volumes {
@@ -73,9 +76,9 @@ func TestProcessClusterConfig(t *testing.T) {
 
 	clusterCfg.Cluster.Network.Name = "host"
 	clusterCfg, err = ProcessClusterConfig(*clusterCfg)
+	require.NoError(t, err)
 	assert.Assert(t, clusterCfg.ClusterCreateOpts.DisableLoadBalancer == true, "The load balancer should be disabled")
 
 	t.Logf("\n===== Resulting Cluster Config (host network) =====\n%+v\n===============\n", clusterCfg)
 	t.Logf("\n===== First Node in Resulting Cluster Config (host network) =====\n%+v\n===============\n", clusterCfg.Cluster.Nodes[0])
-
 }

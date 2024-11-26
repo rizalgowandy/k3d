@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,16 @@ THE SOFTWARE.
 package types
 
 type RuntimeInfo struct {
-	Name          string
-	Endpoint      string `yaml:",omitempty" json:",omitempty"`
-	Version       string `yaml:",omitempty" json:",omitempty"`
-	OSType        string `yaml:",omitempty" json:",omitempty"`
-	OS            string `yaml:",omitempty" json:",omitempty"`
-	Arch          string `yaml:",omitempty" json:",omitempty"`
-	CgroupVersion string `yaml:",omitempty" json:",omitempty"`
-	CgroupDriver  string `yaml:",omitempty" json:",omitempty"`
-	Filesystem    string `yaml:",omitempty" json:",omitempty"`
+	Name          string `json:"name,omitempty"`
+	Endpoint      string `json:"endpoint,omitempty"`
+	Version       string `json:"version,omitempty"`
+	OSType        string `json:"ostype,omitempty"`
+	OS            string `json:"os,omitempty"`
+	Arch          string `json:"arch,omitempty"`
+	CgroupVersion string `json:"cgroupversion,omitempty"`
+	CgroupDriver  string `json:"cgroupdriver,omitempty"`
+	Filesystem    string `json:"filesystem,omitempty"`
+	InfoName      string `json:"infoname,omitempty"`
 }
 
 type NodeLogsOpts struct {

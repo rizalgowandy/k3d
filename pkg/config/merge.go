@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,8 +26,8 @@ import (
 	"fmt"
 
 	"github.com/imdario/mergo"
-	conf "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	conf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 // MergeSimple merges two simple configuration files with the values of the destination one having priority
@@ -35,7 +35,6 @@ func MergeSimple(dest, src conf.SimpleConfig) (*conf.SimpleConfig, error) {
 	l.Log().Debugf("Merging %+v into %+v", src, dest)
 
 	if err := mergo.Merge(&dest, src); err != nil {
-
 		return nil, fmt.Errorf("failed to merge configs: %w", err)
 	}
 

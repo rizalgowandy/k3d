@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,29 +23,36 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/rancher/k3d/v5/pkg/config"
-	l "github.com/rancher/k3d/v5/pkg/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
+
+	"github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/config"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 func InitViperWithConfigFile(cfgViper *viper.Viper, configFile string) error {
-
 	// viper for the general config (file, env and non pre-processed flags)
 	cfgViper.SetEnvPrefix("K3D")
 	cfgViper.AutomaticEnv()
+	cfgViper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	cfgViper.SetConfigType("yaml")
 
 	// Set config file, if specified
 	if configFile != "" {
-
-		if _, err := os.Stat(configFile); err != nil {
+		streams := util.StandardIOStreams()
+		//flag to mark from where we read the config
+		fromStdIn := false
+		if configFile == "-" {
+			fromStdIn = true
+		} else if _, err := os.Stat(configFile); err != nil {
 			l.Log().Fatalf("Failed to stat config file %s: %+v", configFile, err)
 		}
 
@@ -57,10 +64,20 @@ func InitViperWithConfigFile(cfgViper *viper.Viper, configFile string) error {
 		}
 		defer tmpfile.Close()
 
-		originalcontent, err := os.ReadFile(configFile)
-		if err != nil {
-			l.Log().Fatalf("error reading config file %s: %v", configFile, err)
+		var originalcontent []byte
+		if fromStdIn {
+			// otherwise read from stdin
+			originalcontent, err = io.ReadAll(streams.In)
+			if err != nil {
+				l.Log().Fatalf("Failed to read config file from stdin: %+v", err)
+			}
+		} else {
+			originalcontent, err = os.ReadFile(configFile)
+			if err != nil {
+				l.Log().Fatalf("error reading config file %s: %v", configFile, err)
+			}
 		}
+
 		expandedcontent := os.ExpandEnv(string(originalcontent))
 		if _, err := tmpfile.WriteString(expandedcontent); err != nil {
 			l.Log().Fatalf("error writing expanded config file contents to temp file %s: %v", tmpfile.Name(), err)

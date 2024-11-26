@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +23,13 @@ package types
 
 // TypeMeta is basically copied from https://github.com/kubernetes/apimachinery/blob/a3b564b22db316a41e94fdcffcf9995424fe924c/pkg/apis/meta/v1/types.go#L36-L56
 type TypeMeta struct {
-	Kind       string `mapstructure:"kind,omitempty" yaml:"kind,omitempty" json:"kind,omitempty"`
-	APIVersion string `mapstructure:"apiVersion,omitempty" yaml:"apiVersion,omitempty" json:"apiVersion,omitempty"`
+	Kind       string `mapstructure:"kind,omitempty" json:"kind,omitempty"`
+	APIVersion string `mapstructure:"apiVersion,omitempty" json:"apiVersion,omitempty"`
 }
 
 // ObjectMeta got its name from the Kubernetes counterpart.
 type ObjectMeta struct {
-	Name string `mapstructure:"name,omitempty" yaml:"name,omitempty" json:"name,omitempty"`
+	Name string `mapstructure:"name,omitempty" json:"name,omitempty"`
 }
 
 // Config interface.

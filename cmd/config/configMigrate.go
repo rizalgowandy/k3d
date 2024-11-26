@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,22 +25,21 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rancher/k3d/v5/pkg/config"
-	l "github.com/rancher/k3d/v5/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
+
+	"github.com/k3d-io/k3d/v5/pkg/config"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 // NewCmdConfigMigrate returns a new cobra command
 func NewCmdConfigMigrate() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:     "migrate INPUT [OUTPUT]",
 		Aliases: []string{"update"},
 		Args:    cobra.RangeArgs(1, 2),
 		Run: func(cmd *cobra.Command, args []string) {
-
 			configFile := args[0]
 
 			if _, err := os.Stat(configFile); err != nil {
@@ -104,7 +103,6 @@ func NewCmdConfigMigrate() *cobra.Command {
 					l.Log().Fatalln(err)
 				}
 			}
-
 		},
 	}
 

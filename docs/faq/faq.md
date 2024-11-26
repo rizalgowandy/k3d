@@ -2,7 +2,7 @@
 
 ## Issues with BTRFS
 
-- As [@jaredallard](https://github.com/jaredallard) [pointed out](https://github.com/rancher/k3d/pull/48), people running `k3d` on a system with **btrfs**, may need to mount `/dev/mapper` into the nodes for the setup to work.
+- As [@jaredallard](https://github.com/jaredallard) [pointed out](https://github.com/k3d-io/k3d/pull/48), people running `k3d` on a system with **btrfs**, may need to mount `/dev/mapper` into the nodes for the setup to work.
   - This will do: `#!bash k3d cluster create CLUSTER_NAME -v /dev/mapper:/dev/mapper`
 
 ## Issues with ZFS
@@ -19,9 +19,11 @@
 ## Pods evicted due to lack of disk space
 
 - Pods go to evicted state after doing X
-  - Related issues: [#133 - Pods evicted due to `NodeHasDiskPressure`](https://github.com/rancher/k3d/issues/133) (collection of #119 and #130)
+  - Related issues: [#133 - Pods evicted due to `NodeHasDiskPressure`](https://github.com/k3d-io/k3d/issues/133) (collection of #119 and #130)
   - Background: somehow docker runs out of space for the k3d node containers, which triggers a hard eviction in the kubelet
-  - Possible [fix/workaround by @zer0def](https://github.com/rancher/k3d/issues/133#issuecomment-549065666):
+  - Possible [fix/workaround by @zer0def](https://github.com/k3d-io/k3d/issues/133#issuecomment-549065666):
+    - cleanup your host file system: Yes, your host file system may actually be quite packed, triggering the eviction threshold.
+      - on large disks, you may still have quite a few GB leftover, which is more than enough. In that case, lower the threshold as per below.
     - use a docker storage driver which cleans up properly (e.g. overlay2)
     - clean up or expand docker root filesystem
     - change the kubelet's eviction thresholds upon cluster creation:
@@ -31,14 +33,6 @@
         --k3s-arg '--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*' \
         --k3s-arg '--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*'
       ```
-
-## Restarting a multi-server cluster or the initializing server node fails
-
-- What you do: You create a cluster with more than one server node and later, you either stop `server-0` or stop/start the whole cluster
-- What fails: After the restart, you cannot connect to the cluster anymore and `kubectl` will give you a lot of errors
-- What causes this issue: it's a [known issue with dqlite in `k3s`](https://github.com/rancher/k3s/issues/1391) which doesn't allow the initializing server node to go down
-- What's the solution: Hopefully, this will be solved by the planned [replacement of dqlite with embedded etcd in k3s](https://github.com/rancher/k3s/pull/1770)
-- Related issues: [#262](https://github.com/rancher/k3d/issues/262)
 
 ## Passing additional arguments/flags to k3s (and on to e.g. the kube-apiserver)
 
@@ -89,7 +83,7 @@ Some can be fixed by passing the `HTTP_PROXY` environment variables to k3d, some
 
 - Problem: inside the container, the certificate of the corporate proxy cannot be validated
 - Possible Solution: Mounting the CA Certificate from your host into the node containers at start time via `k3d cluster create --volume /path/to/your/certs.crt:/etc/ssl/certs/yourcert.crt`
-- Issue: [rancher/k3d#535](https://github.com/rancher/k3d/discussions/535#discussioncomment-474982)
+- Issue: [k3d-io/k3d#535](https://github.com/k3d-io/k3d/discussions/535#discussioncomment-474982)
 
 ## Spurious PID entries in `/proc` after deleting `k3d` cluster with shared mounts
 
@@ -97,7 +91,7 @@ Some can be fixed by passing the `HTTP_PROXY` environment variables to k3d, some
 - Problem: Due to above, at times you'll see `no space left on device: unknown` when a pod is scheduled to the nodes
 - If you observe anything of above sort you can check for inaccessible file systems and unmount them by using below command (note: please remove `xargs umount -l` and check for the diff o/p first)
 - `diff <(df -ha | grep pods | awk '{print $NF}') <(df -h | grep pods | awk '{print $NF}') | awk '{print $2}' | xargs umount -l`
-- As per the conversation on [rancher/k3d#594](https://github.com/rancher/k3d/issues/594#issuecomment-837900646) above issue wasn't reported/known earlier and so there are high chances that it's not universal.
+- As per the conversation on [k3d-io/k3d#594](https://github.com/k3d-io/k3d/issues/594#issuecomment-837900646) above issue wasn't reported/known earlier and so there are high chances that it's not universal.
 
 ## [SOLVED] Nodes fail to start or get stuck in `NotReady` state with log `nf_conntrack_max: permission denied`
 
@@ -129,7 +123,7 @@ This is going to be fixed "upstream" in k3s itself in [rancher/k3s#3337](https:/
   - v1.19.11-k3s1 ([rancher/k3s#3343](https://github.com/k3s-io/k3s/pull/3343))
   - v1.20.7-k3s1 ([rancher/k3s#3342](https://github.com/k3s-io/k3s/pull/3342))
   - v1.21.1-k3s1 ([rancher/k3s#3341](https://github.com/k3s-io/k3s/pull/3341)))
-- Issue Reference: [rancher/k3s#607](https://github.com/rancher/k3d/issues/607)
+- Issue Reference: [rancher/k3s#607](https://github.com/k3d-io/k3d/issues/607)
 
 ## DockerHub Pull Rate Limit
 
@@ -167,3 +161,19 @@ c) authenticate containerd inside k3s/k3d to use your DockerHub user
   ```
 
 3. Profit. That's it. In the test for this, we pulled the same image 120 times in a row (confirmed, that pull numbers went up), without being rate limited (as a non-paying, normal user)
+
+## Longhorn in k3d
+
+### Problem
+
+Longhorn is not working when deployed in a K3s cluster spawned with k3d.
+
+### Cause
+
+The container image of K3s is quite limited and doesn't contain the necessary libraries.  Also, additional volume mounts and more would be required to get Longhorn up and running properly.  
+So basically Longhorn does rely too much on the host OS to work properly in the dockerized environment without quite some modifications.
+
+### Solution
+
+There are a few ways one can build a working image to use with k3d.  
+See <https://github.com/k3d-io/k3d/discussions/478> for more info.

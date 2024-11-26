@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,21 +24,18 @@ package config
 import (
 	"testing"
 
-	conf "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
+	conf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
 )
 
 func TestValidateSchema(t *testing.T) {
-
 	cfgPath := "./test_assets/config_test_simple.yaml"
 
 	if err := ValidateSchemaFile(cfgPath, []byte(conf.JSONSchema)); err != nil {
 		t.Errorf("Validation of config file %s against the default schema failed: %+v", cfgPath, err)
 	}
-
 }
 
 func TestValidateSchemaFail(t *testing.T) {
-
 	cfgPath := "./test_assets/config_test_simple_invalid_servers.yaml"
 
 	var err error
@@ -52,5 +49,4 @@ func TestValidateSchemaFail(t *testing.T) {
 	if err.Error() != expectedErrorText {
 		t.Errorf("Actual validation error\n%s\ndoes not match expected error\n%s\n", err.Error(), expectedErrorText)
 	}
-
 }

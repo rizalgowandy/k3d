@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,16 +26,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // NewCmdImageImport returns a new cobra command
 func NewCmdImageImport() *cobra.Command {
-
 	loadImageOpts := k3d.ImageImportOpts{}
 
 	// create new command
@@ -45,16 +44,16 @@ func NewCmdImageImport() *cobra.Command {
 		Long: `Import image(s) from docker into k3d cluster(s).
 
 If an IMAGE starts with the prefix 'docker.io/', then this prefix is stripped internally.
-That is, 'docker.io/rancher/k3d-tools:latest' is treated as 'rancher/k3d-tools:latest'.
+That is, 'docker.io/k3d-io/k3d-tools:latest' is treated as 'k3d-io/k3d-tools:latest'.
 
 If an IMAGE starts with the prefix 'library/' (or 'docker.io/library/'), then this prefix is stripped internally.
 That is, 'library/busybox:latest' (or 'docker.io/library/busybox:latest') are treated as 'busybox:latest'.
 
 If an IMAGE does not have a version tag, then ':latest' is assumed.
-That is, 'rancher/k3d-tools' is treated as 'rancher/k3d-tools:latest'.
+That is, 'k3d-io/k3d-tools' is treated as 'k3d-io/k3d-tools:latest'.
 
 A file ARCHIVE always takes precedence.
-So if a file './rancher/k3d-tools' exists, k3d will try to import it instead of the IMAGE of the same name.`,
+So if a file './k3d-io/k3d-tools' exists, k3d will try to import it instead of the IMAGE of the same name.`,
 		Aliases: []string{"load"},
 		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
@@ -98,7 +97,7 @@ So if a file './rancher/k3d-tools' exists, k3d will try to import it instead of 
 
 	cmd.Flags().BoolVarP(&loadImageOpts.KeepTar, "keep-tarball", "k", false, "Do not delete the tarball containing the saved images from the shared volume")
 	cmd.Flags().BoolVarP(&loadImageOpts.KeepToolsNode, "keep-tools", "t", false, "Do not delete the tools node after import")
-	cmd.Flags().StringP("mode", "m", string(k3d.ImportModeAutoDetect), "Which method to use to import images into the cluster [auto, direct, tools]. See https://k3d.io/usage/guides/importing_images/")
+	cmd.Flags().StringP("mode", "m", string(k3d.ImportModeToolsNode), "Which method to use to import images into the cluster [auto, direct, tools]. See https://k3d.io/stable/usage/importing_images/")
 	/* Subcommands */
 
 	// done
@@ -107,7 +106,6 @@ So if a file './rancher/k3d-tools' exists, k3d will try to import it instead of 
 
 // parseLoadImageCmd parses the command input into variables required to create a cluster
 func parseLoadImageCmd(cmd *cobra.Command, args []string) ([]string, []*k3d.Cluster) {
-
 	// --cluster
 	clusterNames, err := cmd.Flags().GetStringArray("cluster")
 	if err != nil {

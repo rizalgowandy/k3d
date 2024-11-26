@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,17 +23,16 @@ package node
 
 import (
 	"github.com/docker/go-connections/nat"
-	"github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/spf13/cobra"
 )
 
 // NewCmdNodeEdit returns a new cobra command
 func NewCmdNodeEdit() *cobra.Command {
-
 	// create new cobra command
 	cmd := &cobra.Command{
 		Use:               "edit NODE",
@@ -43,7 +42,6 @@ func NewCmdNodeEdit() *cobra.Command {
 		Aliases:           []string{"update"},
 		ValidArgsFunction: util.ValidArgsAvailableNodes,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			existingNode, changeset := parseEditNodeCmd(cmd, args)
 
 			l.Log().Debugf("===== Current =====\n%+v\n===== Changeset =====\n%+v\n", existingNode, changeset)
@@ -53,7 +51,6 @@ func NewCmdNodeEdit() *cobra.Command {
 			}
 
 			l.Log().Infof("Successfully updated %s", existingNode.Name)
-
 		},
 	}
 
@@ -68,7 +65,6 @@ func NewCmdNodeEdit() *cobra.Command {
 
 // parseEditNodeCmd parses the command input into variables required to delete nodes
 func parseEditNodeCmd(cmd *cobra.Command, args []string) (*k3d.Node, *k3d.Node) {
-
 	existingNode, err := client.NodeGet(cmd.Context(), runtimes.SelectedRuntime, &k3d.Node{Name: args[0]})
 	if err != nil {
 		l.Log().Fatalln(err)
@@ -98,7 +94,6 @@ func parseEditNodeCmd(cmd *cobra.Command, args []string) (*k3d.Node, *k3d.Node) 
 	changeset.Ports = nat.PortMap{}
 
 	for _, flag := range portFlags {
-
 		portmappings, err := nat.ParsePortSpec(flag)
 		if err != nil {
 			l.Log().Fatalf("Failed to parse port spec '%s': %+v", flag, err)
