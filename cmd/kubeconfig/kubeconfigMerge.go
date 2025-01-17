@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	k3dutil "github.com/rancher/k3d/v5/pkg/util"
+	"github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
+	k3dutil "github.com/k3d-io/k3d/v5/pkg/util"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -45,7 +45,6 @@ type mergeKubeconfigFlags struct {
 
 // NewCmdKubeconfigMerge returns a new cobra command
 func NewCmdKubeconfigMerge() *cobra.Command {
-
 	writeKubeConfigOptions := client.WriteKubeConfigOptions{}
 
 	mergeKubeconfigFlags := mergeKubeconfigFlags{}
@@ -73,7 +72,6 @@ func NewCmdKubeconfigMerge() *cobra.Command {
 					l.Log().Fatalln(err)
 				}
 			} else {
-
 				clusternames := []string{k3d.DefaultClusterName}
 				if len(args) != 0 {
 					clusternames = args

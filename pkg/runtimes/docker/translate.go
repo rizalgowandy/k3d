@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,20 +25,18 @@ package docker
 import (
 	"context"
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/containerd/containerd/log"
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-connections/nat"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	runtimeErr "github.com/rancher/k3d/v5/pkg/runtimes/errors"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	"github.com/rancher/k3d/v5/pkg/types/fixes"
-	"inet.af/netaddr"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	runtimeErr "github.com/k3d-io/k3d/v5/pkg/runtimes/errors"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 
 	dockercliopts "github.com/docker/cli/opts"
 	dockerunits "github.com/docker/go-units"
@@ -57,6 +55,10 @@ func TranslateNodeToContainer(node *k3d.Node) (*NodeInDocker, error) {
 	hostConfig := docker.HostConfig{
 		Init:       &init,
 		ExtraHosts: node.ExtraHosts,
+		// Explicitly require bridge networking. Podman incorrectly uses
+		// slirp4netns when running rootless, therefore for rootless podman to
+		// work, this must be set.
+		NetworkMode: "bridge",
 	}
 	networkingConfig := network.NetworkingConfig{}
 
@@ -65,8 +67,7 @@ func TranslateNodeToContainer(node *k3d.Node) (*NodeInDocker, error) {
 	containerConfig.Image = node.Image
 
 	/* Command & Arguments */
-	// FIXME: FixCgroupV2 - to be removed when fixed upstream
-	if fixes.FixEnabledAny() {
+	if node.K3dEntrypoint {
 		if node.Role == k3d.AgentRole || node.Role == k3d.ServerRole {
 			containerConfig.Entrypoint = []string{
 				"/bin/k3d-entrypoint.sh",
@@ -84,6 +85,11 @@ func TranslateNodeToContainer(node *k3d.Node) (*NodeInDocker, error) {
 
 	/* Labels */
 	containerConfig.Labels = node.RuntimeLabels // has to include the role
+
+	/* Ulimits */
+	if len(node.RuntimeUlimits) > 0 {
+		hostConfig.Ulimits = node.RuntimeUlimits
+	}
 
 	/* Auto-Restart */
 	if node.Restart {
@@ -120,6 +126,9 @@ func TranslateNodeToContainer(node *k3d.Node) (*NodeInDocker, error) {
 	// TODO: can we replace this by a reduced set of capabilities?
 	hostConfig.Privileged = true
 
+	// Privileged containers require userns=host when Docker has userns-remap enabled
+	hostConfig.UsernsMode = "host"
+
 	if node.HostPidMode {
 		hostConfig.PidMode = "host"
 	}
@@ -148,7 +157,7 @@ func TranslateNodeToContainer(node *k3d.Node) (*NodeInDocker, error) {
 	networkingConfig.EndpointsConfig = endpointsConfig
 
 	/* Static IP */
-	if !node.IP.IP.IsZero() && node.IP.Static {
+	if node.IP.IP.IsValid() && node.IP.Static {
 		epconf := networkingConfig.EndpointsConfig[node.Networks[0]]
 		if epconf.IPAMConfig == nil {
 			epconf.IPAMConfig = &network.EndpointIPAMConfig{}
@@ -186,7 +195,6 @@ func TranslateContainerToNode(cont *types.Container) (*k3d.Node, error) {
 
 // TranslateContainerDetailsToNode translates a docker containerJSON object into a k3d node representation
 func TranslateContainerDetailsToNode(containerDetails types.ContainerJSON) (*k3d.Node, error) {
-
 	// first, make sure, that it's actually a k3d managed container by checking if it has all the default labels
 	for k, v := range k3d.DefaultRuntimeLabels {
 		l.Log().Tracef("TranslateContainerDetailsToNode: Checking for default object label %s=%s on container %s", k, v, containerDetails.Name)
@@ -290,19 +298,19 @@ func TranslateContainerDetailsToNode(containerDetails types.ContainerJSON) (*k3d
 		l.Log().Debugf("no netlabel present on container %s", containerDetails.Name)
 	}
 	if clusterNet != nil && labels[k3d.LabelNetwork] != "host" {
-		parsedIP, err := netaddr.ParseIP(clusterNet.IPAddress)
+		parsedIP, err := netip.ParseAddr(clusterNet.IPAddress)
 		if err != nil {
 			if nodeState.Running && nodeState.Status != "restarting" { // if the container is not running or currently restarting, it won't have an IP, so we don't error in that case
 				return nil, fmt.Errorf("failed to parse IP '%s' for container '%s': %s\nStatus: %v\n%+v", clusterNet.IPAddress, containerDetails.Name, err, nodeState.Status, containerDetails.NetworkSettings)
 			} else {
-				log.L.Tracef("failed to parse IP '%s' for container '%s', likely because it's not running (or restarting): %v", clusterNet.IPAddress, containerDetails.Name, err)
+				l.Log().Tracef("failed to parse IP '%s' for container '%s', likely because it's not running (or restarting): %v", clusterNet.IPAddress, containerDetails.Name, err)
 			}
 		}
 		isStaticIP := false
 		if staticIPLabel, ok := labels[k3d.LabelNodeStaticIP]; ok && staticIPLabel != "" {
 			isStaticIP = true
 		}
-		if !parsedIP.IsZero() {
+		if parsedIP.IsValid() {
 			nodeIP = k3d.NodeIP{
 				IP:     parsedIP,
 				Static: isStaticIP,

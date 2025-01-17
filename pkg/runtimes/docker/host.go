@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +24,14 @@ package docker
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/netip"
 )
 
 // GetHostIP returns the IP of the docker host (routable from inside the containers)
-func (d Docker) GetHostIP(ctx context.Context, network string) (net.IP, error) {
+func (d Docker) GetHostIP(ctx context.Context, network string) (netip.Addr, error) {
 	ip, err := GetGatewayIP(ctx, network)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get gateway IP of docker network '%s': %w", network, err)
+		return netip.Addr{}, fmt.Errorf("failed to get gateway IP of docker network '%s': %w", network, err)
 	}
 	return ip, nil
-
 }

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"os"
 
-	config "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	config "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -53,6 +53,7 @@ func NewCmdConfigInit() *cobra.Command {
 					if err != nil {
 						l.Log().Fatalf("Failed to create/overwrite output file: %s", err)
 					}
+					defer file.Close()
 					// write content
 					if _, err = file.WriteString(config.DefaultConfig); err != nil {
 						l.Log().Fatalf("Failed to write to output file: %+v", err)

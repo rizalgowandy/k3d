@@ -1,0 +1,37 @@
+{
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "enabled": true,
+      "matchFileNames": [
+        ".",
+        "docgen",
+        "tools"
+      ]
+    },
+    {
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "enabled": true,
+      "matchFileNames": [
+        ".",
+        "tools",
+        "proxy"
+      ]
+    },
+    {
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash",
+      "matchPackageNames": [
+        "*"
+      ]
+    }
+  ]
+}

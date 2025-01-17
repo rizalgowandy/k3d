@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,4 +39,5 @@ const (
 	// Fixes
 	K3dEnvFixCgroupV2 = "K3D_FIX_CGROUPV2"
 	K3dEnvFixDNS      = "K3D_FIX_DNS"
+	K3dEnvFixMounts   = "K3D_FIX_MOUNTS"
 )

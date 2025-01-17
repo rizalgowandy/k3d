@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,29 +26,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
-
-	"github.com/rancher/k3d/v5/cmd/cluster"
-	cfg "github.com/rancher/k3d/v5/cmd/config"
-	"github.com/rancher/k3d/v5/cmd/debug"
-	"github.com/rancher/k3d/v5/cmd/image"
-	"github.com/rancher/k3d/v5/cmd/kubeconfig"
-	"github.com/rancher/k3d/v5/cmd/node"
-	"github.com/rancher/k3d/v5/cmd/registry"
-	cliutil "github.com/rancher/k3d/v5/cmd/util"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	"github.com/rancher/k3d/v5/version"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/writer"
+	"github.com/spf13/cobra"
+
+	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/k3d-io/k3d/v5/cmd/cluster"
+	cfg "github.com/k3d-io/k3d/v5/cmd/config"
+	"github.com/k3d-io/k3d/v5/cmd/debug"
+	"github.com/k3d-io/k3d/v5/cmd/image"
+	"github.com/k3d-io/k3d/v5/cmd/kubeconfig"
+	"github.com/k3d-io/k3d/v5/cmd/node"
+	"github.com/k3d-io/k3d/v5/cmd/registry"
+	cliutil "github.com/k3d-io/k3d/v5/cmd/util"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	"github.com/k3d-io/k3d/v5/pkg/util"
+	"github.com/k3d-io/k3d/v5/version"
 )
 
 // RootFlags describes a struct that holds flags that can be set on root level of the command
@@ -59,10 +59,14 @@ type RootFlags struct {
 	version            bool
 }
 
+type VersionInfo struct {
+	K3d string `json:"k3d"`
+	K3s string `json:"k3s"`
+}
+
 var flags = RootFlags{}
 
 func NewCmdK3d() *cobra.Command {
-
 	// rootCmd represents the base command when called without any subcommands
 	rootCmd := &cobra.Command{
 		Use:   "k3d",
@@ -109,7 +113,7 @@ All Nodes of a k3d cluster are part of the same docker network.`,
 				if err != nil {
 					l.Log().Fatalln(err)
 				}
-				err = yaml.NewEncoder(os.Stdout).Encode(info)
+				err = util.NewYAMLEncoder(os.Stdout).Encode(info)
 				if err != nil {
 					l.Log().Fatalln(err)
 				}
@@ -156,7 +160,7 @@ func initLogging() {
 	} else {
 		if ll := os.Getenv("LOG_LEVEL"); ll != "" {
 			level, err := logrus.ParseLevel(ll)
-			if err != nil {
+			if err == nil {
 				l.Log().SetLevel(level)
 			}
 		}
@@ -193,7 +197,6 @@ func initLogging() {
 	}
 
 	l.Log().SetFormatter(formatter)
-
 }
 
 func initRuntime() {
@@ -208,20 +211,46 @@ func initRuntime() {
 }
 
 func NewCmdVersion() *cobra.Command {
+	type VersionOutputFormat string
+
+	const (
+		VersionOutputFormatJson VersionOutputFormat = "json"
+	)
+
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Show k3d and default k3s version",
 		Long:  "Show k3d and default k3s version",
 		Run: func(cmd *cobra.Command, args []string) {
-			printVersion()
+			output, _ := cmd.Flags().GetString("output")
+
+			if output == string(VersionOutputFormatJson) {
+				printJsonVersion()
+			} else {
+				printVersion()
+			}
 		},
 		Args: cobra.NoArgs,
 	}
 
+	cmd.Flags().StringP("output", "o", "", "This will return version information as a different format.  Only json is supported")
+
 	cmd.AddCommand(NewCmdVersionLs())
 
 	return cmd
+}
 
+func printJsonVersion() {
+	versionInfo := VersionInfo{
+		K3d: version.GetVersion(),
+		K3s: version.K3sVersion,
+	}
+	versionJson, err := json.Marshal(versionInfo)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(versionJson))
 }
 
 func printVersion() {
@@ -230,7 +259,6 @@ func printVersion() {
 }
 
 func NewCmdVersionLs() *cobra.Command {
-
 	type VersionLsOutputFormat string
 	type VersionLsSortMode string
 
@@ -254,10 +282,18 @@ func NewCmdVersionLs() *cobra.Command {
 		string(VersionLsSortOff):  VersionLsSortOff,
 	}
 
+	var imageRepos map[string]string = map[string]string{
+		"k3d":       "ghcr.io/k3d-io/k3d",
+		"k3d-tools": "ghcr.io/k3d-io/k3d-tools",
+		"k3d-proxy": "ghcr.io/k3d-io/k3d-proxy",
+		"k3s":       "docker.io/rancher/k3s",
+	}
+
 	type Flags struct {
 		includeRegexp string
 		excludeRegexp string
-		format        string
+		format        string // deprecated in favor of outputFormat
+		outputFormat  string
 		sortMode      string
 		limit         int
 	}
@@ -265,15 +301,24 @@ func NewCmdVersionLs() *cobra.Command {
 	flags := Flags{}
 
 	cmd := &cobra.Command{
-		Use:       "list",
+		Use:       "list COMPONENT",
 		Aliases:   []string{"ls"},
-		Short:     "List k3d/K3s versions",
+		Short:     "List k3d/K3s versions. Component can be one of 'k3d', 'k3s', 'k3d-proxy', 'k3d-tools'.",
 		ValidArgs: []string{"k3d", "k3s", "k3d-proxy", "k3d-tools"},
-		Args:      cobra.ExactValidArgs(1),
+		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
+			repo, ok := imageRepos[args[0]]
+			if !ok {
+				l.Log().Fatalf("Unknown target '%s'", args[0])
+			}
+
 			var format VersionLsOutputFormat
-			if f, ok := VersionLsOutputFormats[flags.format]; !ok {
-				l.Log().Fatalf("Unknown output format '%s'", flags.format)
+			if cmd.Flags().Changed("format") {
+				l.Log().Warnf("Flag --format is deprecated and will be removed in a future release. Please use --output instead.")
+				flags.outputFormat = flags.format
+			}
+			if f, ok := VersionLsOutputFormats[flags.outputFormat]; !ok {
+				l.Log().Fatalf("Unknown output format '%s'", flags.outputFormat)
 			} else {
 				format = f
 			}
@@ -285,24 +330,8 @@ func NewCmdVersionLs() *cobra.Command {
 				sortMode = m
 			}
 
-			urlTpl := "https://registry.hub.docker.com/v1/repositories/%s/tags"
-			org := "rancher"
-			repo := fmt.Sprintf("%s/%s", org, args[0])
-			resp, err := http.Get(fmt.Sprintf(urlTpl, repo))
+			tags, err := crane.ListTags(repo)
 			if err != nil {
-				l.Log().Fatalln(err)
-			}
-			defer resp.Body.Close()
-			type Layers struct {
-				Layer string
-				Name  string
-			}
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				l.Log().Fatalln(err)
-			}
-			respJSON := &[]Layers{}
-			if err := json.Unmarshal(body, respJSON); err != nil {
 				l.Log().Fatalln(err)
 			}
 
@@ -316,48 +345,49 @@ func NewCmdVersionLs() *cobra.Command {
 				l.Log().Fatalln(err)
 			}
 
-			tags := []string{}
+			filteredTags := []string{}
 
-			for _, tag := range *respJSON {
-				if includeRegexp.Match([]byte(tag.Name)) {
-					if flags.excludeRegexp == "" || !excludeRegexp.Match([]byte(tag.Name)) {
+			for _, tag := range tags {
+				if includeRegexp.Match([]byte(tag)) {
+					if flags.excludeRegexp == "" || !excludeRegexp.Match([]byte(tag)) {
 						switch format {
 						case VersionLsOutputFormatRaw:
-							tags = append(tags, tag.Name)
+							filteredTags = append(filteredTags, tag)
 						case VersionLsOutputFormatRepo:
-							tags = append(tags, fmt.Sprintf("%s:%s\n", repo, tag.Name))
+							filteredTags = append(filteredTags, fmt.Sprintf("%s:%s\n", repo, tag))
 						default:
 							l.Log().Fatalf("Unknown output format '%+v'", format)
 						}
 					} else {
-						l.Log().Tracef("Tag %s excluded (regexp: `%s`)", tag.Name, flags.excludeRegexp)
+						l.Log().Tracef("Tag %s excluded (regexp: `%s`)", tag, flags.excludeRegexp)
 					}
 				} else {
-					l.Log().Tracef("Tag %s not included (regexp: `%s`)", tag.Name, flags.includeRegexp)
+					l.Log().Tracef("Tag %s not included (regexp: `%s`)", tag, flags.includeRegexp)
 				}
 			}
 
 			// Sort
 			if sortMode != VersionLsSortOff {
-				sort.Slice(tags, func(i, j int) bool {
+				sort.Slice(filteredTags, func(i, j int) bool {
 					if sortMode == VersionLsSortAsc {
-						return tags[i] < tags[j]
+						return filteredTags[i] < filteredTags[j]
 					}
-					return tags[i] > tags[j]
+					return filteredTags[i] > filteredTags[j]
 				})
 			}
 
 			if flags.limit > 0 {
-				tags = tags[0:flags.limit]
+				filteredTags = filteredTags[0:flags.limit]
 			}
-			fmt.Println(strings.Join(tags, "\n"))
-
+			fmt.Println(strings.Join(filteredTags, "\n"))
 		},
 	}
 
 	cmd.Flags().StringVarP(&flags.includeRegexp, "include", "i", ".*", "Include Regexp (default includes everything")
 	cmd.Flags().StringVarP(&flags.excludeRegexp, "exclude", "e", ".+(rc|engine|alpha|beta|dev|test|arm|arm64|amd64).*", "Exclude Regexp (default excludes pre-releases and arch-specific tags)")
-	cmd.Flags().StringVarP(&flags.format, "format", "f", string(VersionLsOutputFormatRaw), "Output Format")
+	cmd.Flags().StringVarP(&flags.format, "format", "f", string(VersionLsOutputFormatRaw), "[DEPRECATED] Use --output instead")
+	cmd.Flags().StringVarP(&flags.outputFormat, "output", "o", string(VersionLsOutputFormatRaw), "Output Format [raw | repo]")
+	cmd.MarkFlagsMutuallyExclusive("format", "output")
 	cmd.Flags().StringVarP(&flags.sortMode, "sort", "s", string(VersionLsSortDesc), "Sort Mode (asc | desc | off)")
 	cmd.Flags().IntVarP(&flags.limit, "limit", "l", 0, "Limit number of tags in output (0 = unlimited)")
 
@@ -366,7 +396,6 @@ func NewCmdVersionLs() *cobra.Command {
 
 // NewCmdCompletion creates a new completion command
 func NewCmdCompletion(rootCmd *cobra.Command) *cobra.Command {
-
 	completionFunctions := map[string]func(io.Writer) error{
 		"bash": rootCmd.GenBashCompletion,
 		"zsh": func(writer io.Writer) error {
@@ -409,7 +438,7 @@ Zsh:
 	$ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
 	# To load completions for each session, execute once:
-	$ k3d completion zsh > "${fpath[1]}/k3d"
+	$ k3d completion zsh > "${fpath[1]}/_k3d"
 
 	# You will need to start a new shell for this setup to take effect.
 
@@ -431,7 +460,7 @@ PowerShell:
 		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		ArgAliases:            []string{"psh"},
 		DisableFlagsInUseLine: true,
-		Args:                  cobra.ExactValidArgs(1),
+		Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
 			if completionFunc, ok := completionFunctions[args[0]]; ok {
 				if err := completionFunc(os.Stdout); err != nil {

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ package config
 import (
 	"testing"
 
-	configtypes "github.com/rancher/k3d/v5/pkg/config/types"
-	conf "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
+	configtypes "github.com/k3d-io/k3d/v5/pkg/config/types"
+	conf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
 	"github.com/spf13/viper"
 	"gotest.tools/assert"
 )

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,12 @@ THE SOFTWARE.
 package docker
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"os"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 type Docker struct{}
@@ -43,7 +44,6 @@ func (d Docker) ID() string {
 
 // GetHost returns the docker daemon host
 func (d Docker) GetHost() string {
-
 	// a) docker-machine
 	machineIP, err := d.GetDockerMachineIP()
 	if err != nil {
@@ -72,11 +72,12 @@ func (d Docker) GetHost() string {
 				return ""
 			}
 			l.Log().Debugln("[Docker] Local DfD: using 'host.docker.internal'")
-			dockerHost = "host.docker.internal"
-			if _, err := net.LookupHost(dockerHost); err != nil {
+			dfdHost := "host.docker.internal"
+			if _, err := net.LookupHost(dfdHost); err != nil {
 				l.Log().Debugf("[Docker] wanted to use 'host.docker.internal' as docker host, but it's not resolvable locally: %v", err)
 				return ""
 			}
+			dockerHost = fmt.Sprintf("tcp://%s", dfdHost)
 		}
 	}
 	url, err := url.Parse(dockerHost)
@@ -85,10 +86,6 @@ func (d Docker) GetHost() string {
 		return ""
 	}
 	dockerHost = url.Host
-	// apparently, host.docker.internal is not parsed as host but
-	if dockerHost == "" && url.String() != "" {
-		dockerHost = url.String()
-	}
 	l.Log().Debugf("[Docker] DockerHost: '%s' (%+v)", dockerHost, url)
 
 	return dockerHost

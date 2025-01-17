@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,20 +26,19 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/sirupsen/logrus"
 )
 
 // createContainer creates a new docker container from translated specs
 func createContainer(ctx context.Context, dockerNode *NodeInDocker, name string) (string, error) {
-
 	l.Log().Tracef("Creating docker container with translated config\n%+v\n", dockerNode)
 
 	// initialize docker client
@@ -50,7 +49,7 @@ func createContainer(ctx context.Context, dockerNode *NodeInDocker, name string)
 	defer docker.Close()
 
 	// create container
-	var resp container.ContainerCreateCreatedBody
+	var resp container.CreateResponse
 	for {
 		resp, err = docker.ContainerCreate(ctx, &dockerNode.ContainerConfig, &dockerNode.HostConfig, &dockerNode.NetworkingConfig, nil, name)
 		if err != nil {
@@ -77,12 +76,11 @@ func startContainer(ctx context.Context, ID string) error {
 	}
 	defer docker.Close()
 
-	return docker.ContainerStart(ctx, ID, types.ContainerStartOptions{})
+	return docker.ContainerStart(ctx, ID, container.StartOptions{})
 }
 
 // removeContainer deletes a running container (like docker rm -f)
 func removeContainer(ctx context.Context, ID string) error {
-
 	// (0) create docker client
 	docker, err := GetDockerClient()
 	if err != nil {
@@ -91,7 +89,7 @@ func removeContainer(ctx context.Context, ID string) error {
 	defer docker.Close()
 
 	// (1) define remove options
-	options := types.ContainerRemoveOptions{
+	options := container.RemoveOptions{
 		RemoveVolumes: true,
 		Force:         true,
 	}
@@ -108,8 +106,7 @@ func removeContainer(ctx context.Context, ID string) error {
 
 // pullImage pulls a container image and outputs progress if --verbose flag is set
 func pullImage(ctx context.Context, docker client.APIClient, image string) error {
-
-	resp, err := docker.ImagePull(ctx, image, types.ImagePullOptions{})
+	resp, err := docker.ImagePull(ctx, image, dockerimage.PullOptions{})
 	if err != nil {
 		return fmt.Errorf("docker failed to pull the image '%s': %w", image, err)
 	}
@@ -120,7 +117,7 @@ func pullImage(ctx context.Context, docker client.APIClient, image string) error
 	// in debug mode (--verbose flag set), output pull progress
 	var writer io.Writer = io.Discard
 	if l.Log().GetLevel() == logrus.DebugLevel {
-		writer = os.Stdout
+		writer = l.Log().Out
 	}
 	_, err = io.Copy(writer, resp)
 	if err != nil {
@@ -128,11 +125,9 @@ func pullImage(ctx context.Context, docker client.APIClient, image string) error
 	}
 
 	return nil
-
 }
 
 func getNodeContainer(ctx context.Context, node *k3d.Node) (*types.Container, error) {
-
 	// (0) create docker client
 	docker, err := GetDockerClient()
 	if err != nil {
@@ -152,7 +147,7 @@ func getNodeContainer(ctx context.Context, node *k3d.Node) (*types.Container, er
 	// -> user input may or may not have the "k3d-" prefix
 	filters.Add("name", fmt.Sprintf("^/?(%s-)?%s$", k3d.DefaultObjectNamePrefix, node.Name))
 
-	containers, err := docker.ContainerList(ctx, types.ContainerListOptions{
+	containers, err := docker.ContainerList(ctx, container.ListOptions{
 		Filters: filters,
 		All:     true,
 	})
@@ -169,7 +164,6 @@ func getNodeContainer(ctx context.Context, node *k3d.Node) (*types.Container, er
 	}
 
 	return &containers[0], nil
-
 }
 
 // executes an arbitrary command in a container while returning its exit code.
@@ -182,7 +176,7 @@ func executeCheckInContainer(ctx context.Context, image string, cmd []string) (i
 	defer docker.Close()
 
 	// create container
-	var resp container.ContainerCreateCreatedBody
+	var resp container.CreateResponse
 	for {
 		resp, err = docker.ContainerCreate(ctx, &container.Config{
 			Image:      image,

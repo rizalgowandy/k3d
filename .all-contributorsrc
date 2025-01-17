@@ -166,12 +166,109 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "ethinx",
+      "name": "York Wong",
+      "avatar_url": "https://avatars.githubusercontent.com/u/965612?v=4",
+      "profile": "https://github.com/ethinx",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "gonzalesraul",
+      "name": "Raul Gonzales",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7568984?v=4",
+      "profile": "https://github.com/gonzalesraul",
+      "contributions": [
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "devholic",
+      "name": "Sunghoon Kang",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6194958?v=4",
+      "profile": "https://hoon.dev",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "kameshsampath",
+      "name": "Kamesh Sampath",
+      "avatar_url": "https://avatars.githubusercontent.com/u/947745?v=4",
+      "profile": "https://blogs.kameshs.dev",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "arikmaor",
+      "name": "Arik Maor",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1926243?v=4",
+      "profile": "https://github.com/arikmaor",
+      "contributions": [
+        "code",
+        "tutorial",
+        "example"
+      ]
+    },
+    {
+      "login": "dgershman",
+      "name": "Danny Gershman",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1850811?v=4",
+      "profile": "https://radiusmethod.com",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "stopanko",
+      "name": "stopanko",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3759349?v=4",
+      "profile": "https://github.com/stopanko",
+      "contributions": [
+        "financial"
+      ]
+    },
+    {
+      "login": "dbreyfogle",
+      "name": "Danny Breyfogle",
+      "avatar_url": "https://avatars.githubusercontent.com/u/27653146?v=4",
+      "profile": "https://github.com/dbreyfogle",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "aabouzaid",
+      "name": "Ahmed AbouZaid",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6760103?v=4",
+      "profile": "https://tech.aabouzaid.com/",
+      "contributions": [
+        "ideas",
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "proudier",
+      "name": "Pierre Roudier",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1056127?v=4",
+      "profile": "https://roudier.io",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
   "projectName": "k3d",
-  "projectOwner": "rancher",
+  "projectOwner": "k3d-io",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true
+  "skipCi": true,
+  "commitConvention": "angular",
+  "commitType": "docs"
 }

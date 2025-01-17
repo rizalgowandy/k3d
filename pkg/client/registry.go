@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,15 +26,17 @@ import (
 	"fmt"
 	gort "runtime"
 
+	wharfie "github.com/rancher/wharfie/pkg/registries"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/imdario/mergo"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	"github.com/rancher/k3d/v5/pkg/runtimes/docker"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
-	"github.com/rancher/k3d/v5/pkg/types/k3s"
-	"github.com/rancher/k3d/v5/pkg/types/k8s"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
+
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/types/k8s"
 )
 
 func RegistryRun(ctx context.Context, runtime runtimes.Runtime, reg *k3d.Registry) (*k3d.Node, error) {
@@ -52,7 +54,6 @@ func RegistryRun(ctx context.Context, runtime runtimes.Runtime, reg *k3d.Registr
 
 // RegistryCreate creates a registry node
 func RegistryCreate(ctx context.Context, runtime runtimes.Runtime, reg *k3d.Registry) (*k3d.Node, error) {
-
 	// registry name
 	if len(reg.Host) == 0 {
 		reg.Host = k3d.DefaultRegistryName
@@ -72,6 +73,27 @@ func RegistryCreate(ctx context.Context, runtime runtimes.Runtime, reg *k3d.Regi
 		Role:     k3d.RegistryRole,
 		Networks: []string{reg.Network},
 		Restart:  true,
+		Env:      []string{},
+	}
+
+	if reg.Options.Proxy.RemoteURL != "" {
+		registryNode.Env = append(registryNode.Env, fmt.Sprintf("REGISTRY_PROXY_REMOTEURL=%s", reg.Options.Proxy.RemoteURL))
+
+		if reg.Options.Proxy.Username != "" {
+			registryNode.Env = append(registryNode.Env, fmt.Sprintf("REGISTRY_PROXY_USERNAME=%s", reg.Options.Proxy.Username))
+		}
+
+		if reg.Options.Proxy.Password != "" {
+			registryNode.Env = append(registryNode.Env, fmt.Sprintf("REGISTRY_PROXY_PASSWORD=%s", reg.Options.Proxy.Password))
+		}
+	}
+
+	if reg.Options.DeleteEnabled {
+		registryNode.Env = append(registryNode.Env, "REGISTRY_STORAGE_DELETE_ENABLED=true")
+	}
+
+	if len(reg.Volumes) > 0 {
+		registryNode.Volumes = reg.Volumes
 	}
 
 	// error out if that registry exists already
@@ -109,12 +131,10 @@ func RegistryCreate(ctx context.Context, runtime runtimes.Runtime, reg *k3d.Regi
 	l.Log().Infof("Successfully created registry '%s'", registryNode.Name)
 
 	return registryNode, nil
-
 }
 
 // RegistryConnectClusters connects an existing registry to one or more clusters
 func RegistryConnectClusters(ctx context.Context, runtime runtimes.Runtime, registryNode *k3d.Node, clusters []*k3d.Cluster) error {
-
 	// find registry node
 	registryNode, err := NodeGet(ctx, runtime, registryNode)
 	if err != nil {
@@ -146,7 +166,6 @@ func RegistryConnectClusters(ctx context.Context, runtime runtimes.Runtime, regi
 
 // RegistryConnectNetworks connects an existing registry to one or more networks
 func RegistryConnectNetworks(ctx context.Context, runtime runtimes.Runtime, registryNode *k3d.Node, networks []string) error {
-
 	// find registry node
 	registryNode, err := NodeGet(ctx, runtime, registryNode)
 	if err != nil {
@@ -171,8 +190,9 @@ func RegistryConnectNetworks(ctx context.Context, runtime runtimes.Runtime, regi
 }
 
 // RegistryGenerateK3sConfig generates the k3s specific registries.yaml configuration for multiple registries
-func RegistryGenerateK3sConfig(ctx context.Context, registries []*k3d.Registry) (*k3s.Registry, error) {
-	regConf := &k3s.Registry{}
+func RegistryGenerateK3sConfig(ctx context.Context, registries []*k3d.Registry) (*wharfie.Registry, error) {
+	regConf := &wharfie.Registry{}
+	rewritesConf := make(map[string]string)
 
 	for _, reg := range registries {
 		internalAddress := fmt.Sprintf("%s:%s", reg.Host, reg.ExposureOpts.Port.Port())
@@ -180,23 +200,25 @@ func RegistryGenerateK3sConfig(ctx context.Context, registries []*k3d.Registry) 
 
 		// init mirrors if nil
 		if regConf.Mirrors == nil {
-			regConf.Mirrors = make(map[string]k3s.Mirror)
+			regConf.Mirrors = make(map[string]wharfie.Mirror)
 		}
 
-		regConf.Mirrors[externalAddress] = k3s.Mirror{
+		regConf.Mirrors[externalAddress] = wharfie.Mirror{
 			Endpoints: []string{
 				fmt.Sprintf("http://%s", internalAddress),
 			},
+			Rewrites: rewritesConf,
 		}
 
-		regConf.Mirrors[internalAddress] = k3s.Mirror{
+		regConf.Mirrors[internalAddress] = wharfie.Mirror{
 			Endpoints: []string{
 				fmt.Sprintf("http://%s", internalAddress),
 			},
+			Rewrites: rewritesConf, // stub out rewrites so we dont override with nil
 		}
 
 		if reg.Options.Proxy.RemoteURL != "" {
-			regConf.Mirrors[reg.Options.Proxy.RemoteURL] = k3s.Mirror{
+			regConf.Mirrors[reg.Options.Proxy.RemoteURL] = wharfie.Mirror{
 				Endpoints: []string{fmt.Sprintf("http://%s", internalAddress)},
 			}
 		}
@@ -220,7 +242,6 @@ func RegistryGet(ctx context.Context, runtime runtimes.Runtime, name string) (*k
 	}
 	// TODO: finish RegistryGet
 	return registry, nil
-
 }
 
 // RegistryFromNode transforms a node spec to a registry spec
@@ -251,26 +272,24 @@ func RegistryFromNode(node *k3d.Node) (*k3d.Registry, error) {
 	l.Log().Tracef("Got registry %+v from node %+v", registry, node)
 
 	return registry, nil
-
 }
 
 // RegistryGenerateLocalRegistryHostingConfigMapYAML generates a ConfigMap used to advertise the registries in the cluster
 func RegistryGenerateLocalRegistryHostingConfigMapYAML(ctx context.Context, runtime runtimes.Runtime, registries []*k3d.Registry) ([]byte, error) {
-
 	type cmMetadata struct {
-		Name      string `yaml:"name"`
-		Namespace string `yaml:"namespace"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
 	}
 
 	type cmData struct {
-		RegHostV1 string `yaml:"localRegistryHosting.v1"`
+		RegHostV1 string `json:"localRegistryHosting.v1"`
 	}
 
 	type configmap struct {
-		APIVersion string     `yaml:"apiVersion"`
-		Kind       string     `yaml:"kind"`
-		Metadata   cmMetadata `yaml:"metadata"`
-		Data       cmData     `yaml:"data"`
+		APIVersion string     `json:"apiVersion"`
+		Kind       string     `json:"kind"`
+		Metadata   cmMetadata `json:"metadata"`
+		Data       cmData     `json:"data"`
 	}
 
 	if len(registries) > 1 {
@@ -315,7 +334,7 @@ func RegistryGenerateLocalRegistryHostingConfigMapYAML(ctx context.Context, runt
 			Host:                     fmt.Sprintf("%s:%s", host, registries[0].ExposureOpts.Binding.HostPort),
 			HostFromContainerRuntime: fmt.Sprintf("%s:%s", registries[0].Host, registries[0].ExposureOpts.Port.Port()),
 			HostFromClusterNetwork:   fmt.Sprintf("%s:%s", registries[0].Host, registries[0].ExposureOpts.Port.Port()),
-			Help:                     "https://k3d.io/usage/guides/registries/#using-a-local-registry",
+			Help:                     "https://k3d.io/stable/usage/registries/#using-a-local-registry",
 		},
 	)
 	if err != nil {
@@ -344,8 +363,8 @@ func RegistryGenerateLocalRegistryHostingConfigMapYAML(ctx context.Context, runt
 	return cmYaml, nil
 }
 
-// RegistryMergeConfig merges a source registry config into an existing dest registry cofnig
-func RegistryMergeConfig(ctx context.Context, dest, src *k3s.Registry) error {
+// RegistryMergeConfig merges a source registry config into an existing dest registry config
+func RegistryMergeConfig(ctx context.Context, dest, src *wharfie.Registry) error {
 	if err := mergo.MergeWithOverwrite(dest, src); err != nil {
 		return fmt.Errorf("failed to merge registry configs: %w", err)
 	}

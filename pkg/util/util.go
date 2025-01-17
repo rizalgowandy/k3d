@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,7 @@ THE SOFTWARE.
 package util
 
 import (
-	"bytes"
-	"io"
 	"strings"
-
-	"gopkg.in/yaml.v2"
 )
 
 func RemoveElementFromStringSlice(slice []string, index int) []string {
@@ -40,27 +36,4 @@ func ReplaceInAllElements(replacer *strings.Replacer, arr []string) []string {
 		arr[i] = replacer.Replace(elem)
 	}
 	return arr
-}
-
-func SplitYAML(resources []byte) ([][]byte, error) {
-
-	dec := yaml.NewDecoder(bytes.NewReader(resources))
-
-	var res [][]byte
-	for {
-		var value interface{}
-		err := dec.Decode(&value)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		valueBytes, err := yaml.Marshal(value)
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, valueBytes)
-	}
-	return res, nil
 }

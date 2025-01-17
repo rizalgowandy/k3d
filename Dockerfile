@@ -1,12 +1,13 @@
-ARG DOCKER_VERSION=20.10
+ARG DOCKER_VERSION=27.3.1
 ############################################################
 # builder                                                  #
 # -> golang image used solely for building the k3d binary  #
 # -> built executable can then be copied into other stages #
 ############################################################
-FROM golang:1.17 as builder
+FROM golang:1.22.4 as builder
 ARG GIT_TAG_OVERRIDE
 WORKDIR /app
+RUN mkdir /tmp/empty
 COPY . .
 RUN make build -e GIT_TAG_OVERRIDE=${GIT_TAG_OVERRIDE} && bin/k3d version
 
@@ -16,22 +17,23 @@ RUN make build -e GIT_TAG_OVERRIDE=${GIT_TAG_OVERRIDE} && bin/k3d version
 # -> used e.g. in our CI pipelines for testing        #
 #######################################################
 FROM docker:$DOCKER_VERSION-dind as dind
-ARG OS=linux
-ARG ARCH=amd64
+ARG OS
+ARG ARCH
+
+ENV OS=${OS}
+ENV ARCH=${ARCH}
+
+# Helper script to install some tooling
+COPY scripts/install-tools.sh /scripts/install-tools.sh
 
 # install some basic packages needed for testing, etc.
-RUN docker version; \
-    echo ">>> building for ${OS}/${ARCH}" && \
-    apk update && \
-    apk add bash curl sudo jq git make netcat-openbsd
+RUN apk update && \
+    apk add bash curl sudo jq git make netcat-openbsd iptables
 
 # install kubectl to interact with the k3d cluster
-RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/${OS}/${ARCH}/kubectl -o /usr/local/bin/kubectl && \
-    chmod +x /usr/local/bin/kubectl
-
 # install yq (yaml processor) from source, as the busybox yq had some issues
-RUN curl -L https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_${OS}_${ARCH} -o /usr/bin/yq &&\
-    chmod +x /usr/bin/yq
+RUN /scripts/install-tools.sh kubectl yq
+
 COPY --from=builder /app/bin/k3d /bin/k3d
 
 #########################################
@@ -39,5 +41,7 @@ COPY --from=builder /app/bin/k3d /bin/k3d
 # -> only the k3d binary.. nothing else #
 #########################################
 FROM scratch as binary-only
+# empty tmp directory to avoid errors when transforming the config file
+COPY --from=builder /tmp/empty /tmp
 COPY --from=builder /app/bin/k3d /bin/k3d
 ENTRYPOINT ["/bin/k3d"]

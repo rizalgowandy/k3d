@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,29 +32,35 @@ const (
 	DefaultLocalRegistryHostingConfigmapTempPath = "/tmp/localRegistryHostingCM.yaml"
 )
 
+type RegistryOptions struct {
+	ConfigFile    string        `json:"configFile,omitempty"`
+	Proxy         RegistryProxy `json:"proxy,omitempty"`
+	DeleteEnabled bool          `json:"deleteEnabled,omitempty"`
+}
+
+type RegistryProxy struct {
+	RemoteURL string `json:"remoteURL"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
+}
+
 // Registry describes a k3d-managed registry
 type Registry struct {
-	ClusterRef   string       // filled automatically -> if created with a cluster
-	Protocol     string       `yaml:"protocol,omitempty" json:"protocol,omitempty"` // default: http
-	Host         string       `yaml:"host" json:"host"`
-	Image        string       `yaml:"image,omitempty" json:"image,omitempty"`
-	Network      string       `yaml:"Network,omitempty" json:"Network,omitempty"`
-	ExposureOpts ExposureOpts `yaml:"expose" json:"expose"`
-	Options      struct {
-		ConfigFile string `yaml:"configFile,omitempty" json:"configFile,omitempty"`
-		Proxy      struct {
-			RemoteURL string `yaml:"remoteURL" json:"remoteURL"`
-			Username  string `yaml:"username,omitempty" json:"username,omitempty"`
-			Password  string `yaml:"password,omitempty" json:"password,omitempty"`
-		} `yaml:"proxy,omitempty" json:"proxy,omitempty"`
-	} `yaml:"options,omitempty" json:"options,omitempty"`
+	ClusterRef   string          // filled automatically -> if created with a cluster
+	Protocol     string          `json:"protocol,omitempty"` // default: http
+	Host         string          `json:"host"`
+	Image        string          `json:"image,omitempty"`
+	Network      string          `json:"Network,omitempty"`
+	Volumes      []string        `json:"Volumes,omitempty"`
+	ExposureOpts ExposureOpts    `json:"expose"`
+	Options      RegistryOptions `json:"options,omitempty"`
 }
 
 // RegistryExternal describes a minimal spec for an "external" registry
 // "external" meaning, that it's unrelated to the current cluster
 // e.g. used for the --registry-use flag registry reference
 type RegistryExternal struct {
-	Protocol string `yaml:"protocol,omitempty" json:"protocol,omitempty"` // default: http
-	Host     string `yaml:"host" json:"host"`
-	Port     string `yaml:"port" json:"port"`
+	Protocol string `json:"protocol,omitempty"` // default: http
+	Host     string `json:"host"`
+	Port     string `json:"port"`
 }

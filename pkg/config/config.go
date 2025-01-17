@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,24 +25,25 @@ import (
 	"fmt"
 	"strings"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 
 	"github.com/spf13/viper"
 
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha2"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha3"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	defaultConfig "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha2"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha3"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha4"
+	defaultConfig "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
 
-	types "github.com/rancher/k3d/v5/pkg/config/types"
+	types "github.com/k3d-io/k3d/v5/pkg/config/types"
 )
 
 const DefaultConfigApiVersion = defaultConfig.ApiVersion
 
 var Schemas = map[string]string{
-	v1alpha2.ApiVersion: v1alpha2.JSONSchema,
-	v1alpha3.ApiVersion: v1alpha3.JSONSchema,
-	v1alpha4.ApiVersion: v1alpha4.JSONSchema,
+	v1alpha2.ApiVersion:      v1alpha2.JSONSchema,
+	v1alpha3.ApiVersion:      v1alpha3.JSONSchema,
+	v1alpha4.ApiVersion:      v1alpha4.JSONSchema,
+	defaultConfig.ApiVersion: defaultConfig.JSONSchema,
 }
 
 func GetSchemaByVersion(apiVersion string) ([]byte, error) {
@@ -54,7 +55,6 @@ func GetSchemaByVersion(apiVersion string) ([]byte, error) {
 }
 
 func FromViper(config *viper.Viper) (types.Config, error) {
-
 	var cfg types.Config
 	var err error
 
@@ -70,6 +70,8 @@ func FromViper(config *viper.Viper) (types.Config, error) {
 		cfg, err = v1alpha3.GetConfigByKind(kind)
 	case "k3d.io/v1alpha4":
 		cfg, err = v1alpha4.GetConfigByKind(kind)
+	case "k3d.io/v1alpha5":
+		cfg, err = defaultConfig.GetConfigByKind(kind)
 	case "":
 		cfg, err = defaultConfig.GetConfigByKind(kind)
 	default:
@@ -93,7 +95,32 @@ func getMigrations(version string) map[string]func(types.Config) (types.Config, 
 		return v1alpha3.Migrations
 	case v1alpha4.ApiVersion:
 		return v1alpha4.Migrations
+	case defaultConfig.ApiVersion:
+		return defaultConfig.Migrations
 	default:
 		return nil
 	}
+}
+
+func SimpleConfigFromViper(cfgViper *viper.Viper) (defaultConfig.SimpleConfig, error) {
+	if cfgViper.GetString("apiversion") == "" {
+		cfgViper.Set("apiversion", DefaultConfigApiVersion)
+	}
+	if cfgViper.GetString("kind") == "" {
+		cfgViper.Set("kind", "Simple")
+	}
+	cfg, err := FromViper(cfgViper)
+	if err != nil {
+		return defaultConfig.SimpleConfig{}, err
+	}
+
+	if cfg.GetAPIVersion() != DefaultConfigApiVersion {
+		l.Log().Warnf("Default config apiVersion is '%s', but you're using '%s': consider migrating.", DefaultConfigApiVersion, cfg.GetAPIVersion())
+		cfg, err = Migrate(cfg, DefaultConfigApiVersion)
+		if err != nil {
+			return defaultConfig.SimpleConfig{}, err
+		}
+	}
+
+	return cfg.(defaultConfig.SimpleConfig), nil
 }

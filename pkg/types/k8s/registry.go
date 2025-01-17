@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,7 +50,7 @@ type LocalRegistryHostingV1 struct {
 	//
 	// This is the registry host that tools outside the cluster should push images
 	// to.
-	Host string `yaml:"host,omitempty" json:"host,omitempty"`
+	Host string `json:"host,omitempty"`
 
 	// HostFromClusterNetwork documents the host (hostname and port) of the
 	// registry, as seen from networking inside the container pods.
@@ -58,7 +58,7 @@ type LocalRegistryHostingV1 struct {
 	// This is the registry host that tools running on pods inside the cluster
 	// should push images to. If not set, then tools inside the cluster should
 	// assume the local registry is not available to them.
-	HostFromClusterNetwork string `yaml:"hostFromClusterNetwork,omitempty" json:"hostFromClusterNetwork,omitempty"`
+	HostFromClusterNetwork string `json:"hostFromClusterNetwork,omitempty"`
 
 	// HostFromContainerRuntime documents the host (hostname and port) of the
 	// registry, as seen from the cluster's container runtime.
@@ -70,7 +70,7 @@ type LocalRegistryHostingV1 struct {
 	// Note that it doesn't make sense semantically to define this field, but not
 	// define Host or HostFromClusterNetwork. That would imply a way to pull
 	// images without a way to push images.
-	HostFromContainerRuntime string `yaml:"hostFromContainerRuntime,omitempty" json:"hostFromContainerRuntime,omitempty"`
+	HostFromContainerRuntime string `json:"hostFromContainerRuntime,omitempty"`
 
 	// Help contains a URL pointing to documentation for users on how to set
 	// up and configure a local registry.
@@ -83,7 +83,7 @@ type LocalRegistryHostingV1 struct {
 	// fail, the tool should display this help URL to the user. The help URL
 	// should contain instructions on how to diagnose broken or misconfigured
 	// registries.
-	Help string `yaml:"help,omitempty" json:"help,omitempty"`
+	Help string `json:"help,omitempty"`
 }
 
 // LocalRegistryHosting defaults

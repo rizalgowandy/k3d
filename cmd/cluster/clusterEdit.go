@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,17 @@ THE SOFTWARE.
 package cluster
 
 import (
-	"github.com/rancher/k3d/v5/cmd/util"
-	cliutil "github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	conf "github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	cliutil "github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	conf "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/spf13/cobra"
 )
 
 // NewCmdClusterEdit returns a new cobra command
 func NewCmdClusterEdit() *cobra.Command {
-
 	// create new cobra command
 	cmd := &cobra.Command{
 		Use:               "edit CLUSTER",
@@ -42,9 +40,8 @@ func NewCmdClusterEdit() *cobra.Command {
 		Long:              `[EXPERIMENTAL] Edit cluster(s).`,
 		Args:              cobra.ExactArgs(1),
 		Aliases:           []string{"update"},
-		ValidArgsFunction: util.ValidArgsAvailableClusters,
+		ValidArgsFunction: cliutil.ValidArgsAvailableClusters,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			existingCluster, changeset := parseEditClusterCmd(cmd, args)
 
 			l.Log().Debugf("===== Current =====\n%+v\n===== Changeset =====\n%+v\n", existingCluster, changeset)
@@ -54,7 +51,6 @@ func NewCmdClusterEdit() *cobra.Command {
 			}
 
 			l.Log().Infof("Successfully updated %s", existingCluster.Name)
-
 		},
 	}
 
@@ -69,7 +65,6 @@ func NewCmdClusterEdit() *cobra.Command {
 
 // parseEditClusterCmd parses the command input into variables required to delete nodes
 func parseEditClusterCmd(cmd *cobra.Command, args []string) (*k3d.Cluster, *conf.SimpleConfig) {
-
 	existingCluster, err := client.ClusterGet(cmd.Context(), runtimes.SelectedRuntime, &k3d.Cluster{Name: args[0]})
 	if err != nil {
 		l.Log().Fatalln(err)
@@ -96,7 +91,6 @@ func parseEditClusterCmd(cmd *cobra.Command, args []string) (*k3d.Cluster, *conf
 
 	portFilterMap := make(map[string][]string, 1)
 	for _, portFlag := range portFlags {
-
 		// split node filter from the specified volume
 		portmap, filters, err := cliutil.SplitFiltersFromFlag(portFlag)
 		if err != nil {

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,25 +27,25 @@ import (
 	"testing"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 func TestRegistryGenerateLocalRegistryHostingConfigMapYAML(t *testing.T) {
 	var err error
 
 	expectedYAMLString := `apiVersion: v1
+data:
+  localRegistryHosting.v1: |
+    help: https://k3d.io/stable/usage/registries/#using-a-local-registry
+    host: test-host:5432
+    hostFromClusterNetwork: test-host:1234
+    hostFromContainerRuntime: test-host:1234
 kind: ConfigMap
 metadata:
   name: local-registry-hosting
   namespace: kube-public
-data:
-  localRegistryHosting.v1: |
-    host: test-host:5432
-    hostFromClusterNetwork: test-host:1234
-    hostFromContainerRuntime: test-host:1234
-    help: https://k3d.io/usage/guides/registries/#using-a-local-registry
-`
+	`
 
 	reg := &k3d.Registry{
 		Host: "test-host",
@@ -62,7 +62,6 @@ data:
 	}
 
 	if !(strings.TrimSpace(string(cm)) == strings.TrimSpace(expectedYAMLString)) {
-		t.Errorf("Computed configmap\n-> Actual: %s\n  does not match expected YAML\n-> Expected: %s", strings.TrimSpace(string(cm)), strings.TrimSpace(expectedYAMLString))
+		t.Errorf("Computed configmap\n-> Actual:\n%s\n  does not match expected YAML\n-> Expected:\n%s", strings.TrimSpace(string(cm)), strings.TrimSpace(expectedYAMLString))
 	}
-
 }

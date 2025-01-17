@@ -12,7 +12,7 @@ K3s ships with lots of built-in features and services, some of which may only be
 
 > Cluster DNS service
 
-## Resources
+### Resources
 
 - Manifest embedded in K3s: <https://github.com/k3s-io/k3s/blob/master/manifests/coredns.yaml>
   - Note: it includes template variables (like `%{CLUSTER_DOMAIN}%`) that will be replaced by K3s before writing the file to the filesystem
@@ -52,7 +52,7 @@ You'd need to map some local directory to that path to easily use the files insi
 
 ### Traefik in k3d
 
-k3d runs K3s in containers, so you'll need to expose the http/https ports on your host to easily access Ingress resources in your cluster. We have a guide over here explaining how to do this: <https://k3d.io/usage/guides/exposing_services/#1-via-ingress-recommended>
+k3d runs K3s in containers, so you'll need to expose the http/https ports on your host to easily access Ingress resources in your cluster. We have a guide over here explaining how to do this, [see](exposing_services.md)
 
 ## servicelb (klipper-lb)
 

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,6 @@ var src = rand.NewSource(time.Now().UnixNano())
 // GenerateRandomString thanks to https://stackoverflow.com/a/31832326/6450189
 // GenerateRandomString is used to generate a random string that is used as a cluster token
 func GenerateRandomString(n int) string {
-
 	sb := strings.Builder{}
 	sb.Grow(n)
 	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!

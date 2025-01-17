@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,12 +25,11 @@ import (
 	"fmt"
 	"strings"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 // SplitFiltersFromFlag separates a flag's value from the node filter, if there is one
 func SplitFiltersFromFlag(flag string) (string, []string, error) {
-
 	/* Case 1) no filter specified */
 
 	if !strings.Contains(flag, "@") {
@@ -44,7 +43,6 @@ func SplitFiltersFromFlag(flag string) (string, []string, error) {
 	buffer := ""
 
 	for i, it := range split {
-
 		// Case 1: There's a '\' just before the '@' sign -> Should it be escaped (aka be a literal '@')?
 		if strings.HasSuffix(it, "\\") && i != len(split)-1 {
 			// Case 1.1: Escaped backslash
@@ -75,5 +73,4 @@ func SplitFiltersFromFlag(flag string) (string, []string, error) {
 	}
 
 	return newsplit[0], strings.Split(newsplit[1], ";"), nil
-
 }

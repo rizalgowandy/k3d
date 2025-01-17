@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,10 @@ import (
 	"testing"
 
 	"github.com/go-test/deep"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha3"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha4"
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha3"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha4"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -53,11 +54,15 @@ func TestMigrate(t *testing.T) {
 			actualPath:    "test_assets/config_test_simple_migration_v1alpha3.yaml",
 			expectedPath:  "test_assets/config_test_simple_migration_v1alpha4.yaml",
 		},
+		"V1Alpha4ToV1Alpha5": {
+			targetVersion: v1alpha5.ApiVersion,
+			actualPath:    "test_assets/config_test_simple_migration_v1alpha4.yaml",
+			expectedPath:  "test_assets/config_test_simple_migration_v1alpha5.yaml",
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-
 			actualViper := viper.New()
 			expectedViper := viper.New()
 
@@ -80,6 +85,7 @@ func TestMigrate(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			t.Logf("Migrating %s to %s", actualCfg.GetAPIVersion(), tc.targetVersion)
 			if actualCfg.GetAPIVersion() != tc.targetVersion {
 				actualCfg, err = Migrate(actualCfg, tc.targetVersion)
 				if err != nil {
@@ -95,7 +101,6 @@ func TestMigrate(t *testing.T) {
 			if diff := deep.Equal(actualCfg, expectedCfg); diff != nil {
 				t.Fatalf("Actual\n%#v\ndoes not match expected\n%+v\nDiff:\n%#v", actualCfg, expectedCfg, diff)
 			}
-
 		})
 	}
 }

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,9 +30,9 @@ import (
 	"path/filepath"
 	"time"
 
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -49,7 +49,6 @@ type WriteKubeConfigOptions struct {
 // 2. modifies it by updating some fields with cluster-specific information
 // 3. writes it to the specified output
 func KubeconfigGetWrite(ctx context.Context, runtime runtimes.Runtime, cluster *k3d.Cluster, output string, writeKubeConfigOptions *WriteKubeConfigOptions) (string, error) {
-
 	// get kubeconfig from cluster node
 	kubeconfig, err := KubeconfigGet(ctx, runtime, cluster)
 	if err != nil {
@@ -75,7 +74,6 @@ func KubeconfigGetWrite(ctx context.Context, runtime runtimes.Runtime, cluster *
 	for {
 		existingKubeConfig, err = clientcmd.LoadFromFile(output) // will return an empty config if file is empty
 		if err != nil {
-
 			// the output file does not exist: try to create it and try again
 			if os.IsNotExist(err) && firstRun {
 				l.Log().Debugf("Output path '%s' doesn't exist, trying to create it...", output)
@@ -103,7 +101,6 @@ func KubeconfigGetWrite(ctx context.Context, runtime runtimes.Runtime, cluster *
 
 	// update existing kubeconfig, but error out if there are conflicting fields but we don't want to update them
 	return output, KubeconfigMerge(ctx, kubeconfig, existingKubeConfig, output, writeKubeConfigOptions.UpdateExisting, writeKubeConfigOptions.UpdateCurrentContext)
-
 }
 
 // KubeconfigGet grabs the kubeconfig file from /output from a server node container,
@@ -210,12 +207,7 @@ func KubeconfigWriteToPath(ctx context.Context, kubeconfig *clientcmdapi.Config,
 		defer output.Close()
 	}
 
-	kubeconfigBytes, err := clientcmd.Write(*kubeconfig)
-	if err != nil {
-		return fmt.Errorf("failed to write kubeconfig: %w", err)
-	}
-
-	_, err = output.Write(kubeconfigBytes)
+	err = KubeconfigWriteToStream(ctx, kubeconfig, output)
 	if err != nil {
 		return fmt.Errorf("failed to write file '%s': %w", output.Name(), err)
 	}
@@ -223,19 +215,32 @@ func KubeconfigWriteToPath(ctx context.Context, kubeconfig *clientcmdapi.Config,
 	l.Log().Debugf("Wrote kubeconfig to '%s'", output.Name())
 
 	return nil
+}
 
+// KubeconfigWriteToStream takes a kubeconfig and writes it to stream
+func KubeconfigWriteToStream(ctx context.Context, kubeconfig *clientcmdapi.Config, writer io.Writer) error {
+	kubeconfigBytes, err := clientcmd.Write(*kubeconfig)
+	if err != nil {
+		return fmt.Errorf("failed to write kubeconfig: %w", err)
+	}
+
+	_, err = writer.Write(kubeconfigBytes)
+	if err != nil {
+		return fmt.Errorf("failed to write stream '%s'", err)
+	}
+
+	return nil
 }
 
 // KubeconfigMerge merges a new kubeconfig into an existing kubeconfig and returns the result
 func KubeconfigMerge(ctx context.Context, newKubeConfig *clientcmdapi.Config, existingKubeConfig *clientcmdapi.Config, outPath string, overwriteConflicting bool, updateCurrentContext bool) error {
-
 	l.Log().Tracef("Merging new Kubeconfig:\n%+v\n>>> into existing Kubeconfig:\n%+v", newKubeConfig, existingKubeConfig)
 
 	// Overwrite values in existing kubeconfig
 	for k, v := range newKubeConfig.Clusters {
 		if _, ok := existingKubeConfig.Clusters[k]; ok {
 			if !overwriteConflicting {
-				return fmt.Errorf("Cluster '%s' already exists in target KubeConfig", k)
+				return fmt.Errorf("cluster '%s' already exists in target KubeConfig", k)
 			}
 		}
 		existingKubeConfig.Clusters[k] = v
@@ -252,7 +257,7 @@ func KubeconfigMerge(ctx context.Context, newKubeConfig *clientcmdapi.Config, ex
 
 	for k, v := range newKubeConfig.Contexts {
 		if _, ok := existingKubeConfig.Contexts[k]; ok && !overwriteConflicting {
-			return fmt.Errorf("Context '%s' already exists in target KubeConfig", k)
+			return fmt.Errorf("context '%s' already exists in target KubeConfig", k)
 		}
 		existingKubeConfig.Contexts[k] = v
 	}
@@ -278,12 +283,22 @@ func KubeconfigWrite(ctx context.Context, kubeconfig *clientcmdapi.Config, path 
 		return fmt.Errorf("failed to write merged kubeconfig to temporary file '%s': %w", tempPath, err)
 	}
 
+	// In case path is a symlink, retrives the name of the target
+	realPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return fmt.Errorf("failed to follow symlink '%s': %w", path, err)
+	}
+
 	// Move temporary file over existing KubeConfig
-	if err := os.Rename(tempPath, path); err != nil {
+	if err := os.Rename(tempPath, realPath); err != nil {
 		return fmt.Errorf("failed to overwrite existing KubeConfig '%s' with new kubeconfig '%s': %w", path, tempPath, err)
 	}
 
-	l.Log().Debugf("Wrote kubeconfig to '%s'", path)
+	extraLog := ""
+	if filepath.Clean(path) != realPath {
+		extraLog = fmt.Sprintf("(via symlink '%s')", path)
+	}
+	l.Log().Debugf("Wrote kubeconfig to '%s' %s", realPath, extraLog)
 
 	return nil
 }

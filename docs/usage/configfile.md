@@ -24,13 +24,13 @@ Using a config file is as easy as putting it in a well-known place in your file 
 
 As of the time of writing this documentation, the config file only **requires** you to define two fields:
 
-- `apiVersion` to match the version of the config file that you want to use (at this time it would be `apiVersion: k3d.io/v1alpha4`)
+- `apiVersion` to match the version of the config file that you want to use (at this time it would be `apiVersion: k3d.io/v1alpha5`)
 - `kind` to define the kind of config file that you want to use (currently we only have the `Simple` config)
 
 So this would be the minimal config file, which configures absolutely nothing:
 
 ```yaml
-apiVersion: k3d.io/v1alpha4
+apiVersion: k3d.io/v1alpha5
 kind: Simple
 ```
 
@@ -42,7 +42,7 @@ Currently, the config file is still in an Alpha-State, meaning, that it is subje
 !!! info "Validation via JSON-Schema"
     k3d uses a [JSON-Schema](https://json-schema.org/) to describe the expected format and fields of the configuration file.  
     This schema is also used to [validate](https://github.com/xeipuuv/gojsonschema#validation) a user-given config file.  
-    This JSON-Schema can be found in the specific config version sub-directory in the repository (e.g. [here for `v1alpha4`](https://github.com/rancher/k3d/blob/main/pkg/config/v1alpha4/schema.json)) and could be used to lookup supported fields or by linters to validate the config file, e.g. in your code editor.  
+    This JSON-Schema can be found in the specific config version sub-directory in the repository (e.g. [here for `v1alpha5`](https://github.com/k3d-io/k3d/blob/main/pkg/config/v1alpha5/schema.json)) and could be used to lookup supported fields or by linters to validate the config file, e.g. in your code editor.  
 
 ### All Options: Example
 
@@ -50,7 +50,7 @@ Since the config options and the config file are changing quite a bit, it's hard
 
 ```yaml
 # k3d configuration file, saved as e.g. /home/me/myk3dcluster.yaml
-apiVersion: k3d.io/v1alpha4 # this will change in the future as we make everything more stable
+apiVersion: k3d.io/v1alpha5 # this will change in the future as we make everything more stable
 kind: Simple # internally, we also have a Cluster config, which is not yet available externally
 metadata:
   name: mycluster # name that you want to give to your cluster (will still be prefixed with `k3d-`)
@@ -77,11 +77,30 @@ env:
   - envVar: bar=baz # same as `--env 'bar=baz@server:0'`
     nodeFilters:
       - server:0
+files:
+  - description: 'Source: Embedded, Destination: Magic shortcut path'
+    source: |
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: foo
+    destination: k3s-manifests-custom/foo.yaml # Resolved to /var/lib/rancher/k3s/server/manifests/custom/foo.yaml
+  - description: 'Source: Relative, Destination: Absolute path, Node: Servers only'
+    source: ns-baz.yaml
+    destination: /var/lib/rancher/k3s/server/manifests/baz.yaml
+    nodeFilters:
+    - "server:*"
 registries: # define how registries should be created or used
   create: # creates a default registry to be used with the cluster; same as `--registry-create registry.localhost`
     name: registry.localhost
     host: "0.0.0.0"
     hostPort: "5000"
+    proxy: # omit this to have a "normal" registry, set this to create a registry proxy (pull-through cache)
+      remoteURL: https://registry-1.docker.io # mirror the DockerHub registry
+      username: "" # unauthenticated
+      password: "" # unauthenticated
+    volumes:
+      - /some/path:/var/lib/registry # persist registry data locally
   use:
     - k3d-myotherregistry:5000 # some other k3d-managed registry; same as `--registry-use 'k3d-myotherregistry:5000'`
   config: | # define contents of the `registries.yaml` file (or reference a file); same as `--registry-config /path/to/config.yaml`
@@ -89,9 +108,17 @@ registries: # define how registries should be created or used
       "my.company.registry":
         endpoint:
           - http://my.company.registry:5000
+hostAliases: # /etc/hosts style entries to be injected into /etc/hosts in the node containers and in the NodeHosts section in CoreDNS
+  - ip: 1.2.3.4
+    hostnames: 
+      - my.host.local
+      - that.other.local
+  - ip: 1.1.1.1
+    hostnames:
+      - cloud.flare.dns
 options:
   k3d: # k3d runtime settings
-    wait: true # wait for cluster to be usable before returining; same as `--wait` (default: true)
+    wait: true # wait for cluster to be usable before returning; same as `--wait` (default: true)
     timeout: "60s" # wait timeout before aborting; same as `--timeout 60s`
     disableLoadbalancer: false # same as `--no-lb`
     disableImageVolume: false # same as `--no-image-volume`
@@ -101,7 +128,7 @@ options:
         - settings.workerConnections=2048
   k3s: # options passed on to K3s itself
     extraArgs: # additional arguments passed to the `k3s server|agent` command; same as `--k3s-arg`
-      - arg: --tls-san=my.host.domain
+      - arg: "--tls-san=my.host.domain"
         nodeFilters:
           - server:*
     nodeLabels:
@@ -117,8 +144,16 @@ options:
       - label: bar=baz # same as `--runtime-label 'bar=baz@agent:1'` -> this results in a runtime (docker) container label
         nodeFilters:
           - agent:1
+    ulimits:
+      - name: nofile
+        soft: 26677
+        hard: 26677
 
 ```
+
+## Tips
+
+- k3d [expands environment variables](https://pkg.go.dev/os#ExpandEnv) (`$VAR` or `${VAR}`) unconditionally in the config file, even before processing it in any way.  
 
 ## Config File vs. CLI Flags
 

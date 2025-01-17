@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,16 +31,17 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/docker/docker/api/types/container"
+
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	runtimeErrors "github.com/k3d-io/k3d/v5/pkg/runtimes/errors"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/pkg/errors"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	runtimeErrors "github.com/rancher/k3d/v5/pkg/runtimes/errors"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
 	"github.com/spf13/pflag"
 )
 
@@ -79,7 +80,7 @@ func (d Docker) CopyToNode(ctx context.Context, src string, dest string, node *k
 	}
 	defer docker.Close()
 
-	container, err := getNodeContainer(ctx, node)
+	nodeContainer, err := getNodeContainer(ctx, node)
 	if err != nil {
 		return fmt.Errorf("failed to find container for target node '%s': %w", node.Name, err)
 	}
@@ -98,7 +99,7 @@ func (d Docker) CopyToNode(ctx context.Context, src string, dest string, node *k
 
 	destInfo := archive.CopyInfo{Path: dest}
 
-	destStat, _ := docker.ContainerStatPath(ctx, container.ID, dest) // don't blame me, docker is also not doing anything if err != nil ¯\_(ツ)_/¯
+	destStat, _ := docker.ContainerStatPath(ctx, nodeContainer.ID, dest) // don't blame me, docker is also not doing anything if err != nil ¯\_(ツ)_/¯
 
 	destInfo.Exists, destInfo.IsDir = true, destStat.Mode.IsDir()
 
@@ -108,12 +109,11 @@ func (d Docker) CopyToNode(ctx context.Context, src string, dest string, node *k
 	}
 	defer preparedArchive.Close()
 
-	return docker.CopyToContainer(ctx, container.ID, destDir, preparedArchive, types.CopyToContainerOptions{AllowOverwriteDirWithFile: false})
+	return docker.CopyToContainer(ctx, nodeContainer.ID, destDir, preparedArchive, container.CopyToContainerOptions{AllowOverwriteDirWithFile: false})
 }
 
 // WriteToNode writes a byte array to the selected node
 func (d Docker) WriteToNode(ctx context.Context, content []byte, dest string, mode os.FileMode, node *k3d.Node) error {
-
 	nodeContainer, err := getNodeContainer(ctx, node)
 	if err != nil {
 		return fmt.Errorf("Failed to find container for node '%s': %+v", node.Name, err)
@@ -148,7 +148,7 @@ func (d Docker) WriteToNode(ctx context.Context, content []byte, dest string, mo
 	}
 
 	tarBytes := bytes.NewReader(buf.Bytes())
-	if err := docker.CopyToContainer(ctx, nodeContainer.ID, "/", tarBytes, types.CopyToContainerOptions{AllowOverwriteDirWithFile: true}); err != nil {
+	if err := docker.CopyToContainer(ctx, nodeContainer.ID, "/", tarBytes, container.CopyToContainerOptions{AllowOverwriteDirWithFile: true}); err != nil {
 		return fmt.Errorf("Failed to copy content to container '%s': %+v", nodeContainer.ID, err)
 	}
 
@@ -188,11 +188,11 @@ func GetDockerClient() (client.APIClient, error) {
 	}
 
 	newClientOpts := flags.NewClientOptions()
-	newClientOpts.Common.LogLevel = l.Log().GetLevel().String() // this is needed, as the following Initialize() call will set a new log level on the global logrus instance
+	newClientOpts.LogLevel = l.Log().GetLevel().String() // this is needed, as the following Initialize() call will set a new log level on the global logrus instance
 
 	flagset := pflag.NewFlagSet("docker", pflag.ContinueOnError)
-	newClientOpts.Common.InstallFlags(flagset)
-	newClientOpts.Common.SetDefaultOptions(flagset)
+	newClientOpts.InstallFlags(flagset)
+	newClientOpts.SetDefaultOptions(flagset)
 
 	err = dockerCli.Initialize(newClientOpts)
 	if err != nil {

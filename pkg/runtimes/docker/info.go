@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"strings"
 
-	runtimeTypes "github.com/rancher/k3d/v5/pkg/runtimes/types"
+	runtimeTypes "github.com/k3d-io/k3d/v5/pkg/runtimes/types"
 )
 
 func (d Docker) Info() (*runtimeTypes.RuntimeInfo, error) {
@@ -53,6 +53,7 @@ func (d Docker) Info() (*runtimeTypes.RuntimeInfo, error) {
 		CgroupVersion: info.CgroupVersion,
 		CgroupDriver:  info.CgroupDriver,
 		Filesystem:    "UNKNOWN",
+		InfoName:      info.Name,
 	}
 
 	// Get the backing filesystem for the storage driver

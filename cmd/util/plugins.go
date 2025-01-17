@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ import (
 	"os/exec"
 	"strings"
 
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // HandlePlugin takes care of finding and executing a plugin based on the longest prefix
@@ -61,7 +61,6 @@ func HandlePlugin(ctx context.Context, args []string) (bool, error) {
 	}
 
 	return true, ExecPlugin(ctx, execPath, args[len(argsPrefix):], os.Environ())
-
 }
 
 // FindPlugin tries to find the plugin executable on the filesystem

@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,11 @@ THE SOFTWARE.
 package node
 
 import (
-	"github.com/rancher/k3d/v5/cmd/util"
-	"github.com/rancher/k3d/v5/pkg/client"
-	l "github.com/rancher/k3d/v5/pkg/logger"
-	"github.com/rancher/k3d/v5/pkg/runtimes"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/cmd/util"
+	"github.com/k3d-io/k3d/v5/pkg/client"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +37,6 @@ type nodeDeleteFlags struct {
 
 // NewCmdNodeDelete returns a new cobra command
 func NewCmdNodeDelete() *cobra.Command {
-
 	flags := nodeDeleteFlags{}
 
 	// create new cobra command
@@ -47,7 +46,6 @@ func NewCmdNodeDelete() *cobra.Command {
 		Long:              `Delete node(s).`,
 		ValidArgsFunction: util.ValidArgsAvailableNodes,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			nodes := parseDeleteNodeCmd(cmd, args, &flags)
 			nodeDeleteOpts := k3d.NodeDeleteOpts{SkipLBUpdate: flags.All} // do not update LB, if we're deleting all nodes anyway
 
@@ -76,7 +74,6 @@ func NewCmdNodeDelete() *cobra.Command {
 
 // parseDeleteNodeCmd parses the command input into variables required to delete nodes
 func parseDeleteNodeCmd(cmd *cobra.Command, args []string, flags *nodeDeleteFlags) []*k3d.Node {
-
 	var nodes []*k3d.Node
 	var err error
 

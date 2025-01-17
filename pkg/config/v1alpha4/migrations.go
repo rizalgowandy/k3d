@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	configtypes "github.com/rancher/k3d/v5/pkg/config/types"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha2"
-	"github.com/rancher/k3d/v5/pkg/config/v1alpha3"
-	l "github.com/rancher/k3d/v5/pkg/logger"
+	configtypes "github.com/k3d-io/k3d/v5/pkg/config/types"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha2"
+	"github.com/k3d-io/k3d/v5/pkg/config/v1alpha3"
+	l "github.com/k3d-io/k3d/v5/pkg/logger"
 )
 
 var Migrations = map[string]func(configtypes.Config) (configtypes.Config, error){
@@ -91,7 +91,6 @@ func MigrateV1Alpha3(input configtypes.Config) (configtypes.Config, error) {
 		l.Log().Debugf("Migrated config: %+v", cfg)
 
 		return cfg, nil
-
 	}
 
 	l.Log().Debugf("No migration needed for %s#%s -> %s#%s", input.GetAPIVersion(), input.GetKind(), ApiVersion, input.GetKind())

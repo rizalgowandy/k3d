@@ -3,14 +3,15 @@ name: AUR Prerelease
 on:
   release:
     types: [prereleased]
+  workflow_dispatch:
 
 jobs:
   aur-pre-release:
-    runs-on: ubuntu-20.04
-    container: archlinux:base-20210228.0.16308
+    runs-on: ubuntu-22.04
+    container: archlinux:base
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Publish Pre-Release to AUR
         run: |
           # AUR Packages are not allowed to use - in the package version. its used to combine pkgver and pkgrel

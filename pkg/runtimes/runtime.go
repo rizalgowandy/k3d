@@ -1,5 +1,5 @@
 /*
-Copyright © 2020-2022 The k3d Author(s)
+Copyright © 2020-2023 The k3d Author(s)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
+	"net/netip"
 	"os"
 	"time"
 
-	"github.com/rancher/k3d/v5/pkg/runtimes/docker"
-	runtimeTypes "github.com/rancher/k3d/v5/pkg/runtimes/types"
-	k3d "github.com/rancher/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
+	runtimeTypes "github.com/k3d-io/k3d/v5/pkg/runtimes/types"
+	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 )
 
 // SelectedRuntime is a runtime (pun intended) variable determining the selected runtime
@@ -55,7 +55,7 @@ type Runtime interface {
 	RenameNode(context.Context, *k3d.Node, string) error
 	GetNodesByLabel(context.Context, map[string]string) ([]*k3d.Node, error)
 	GetNode(context.Context, *k3d.Node) (*k3d.Node, error)
-	GetNodeStatus(context.Context, *k3d.Node) (bool, string, error)
+	GetNodeStatus(context.Context, *k3d.Node) (bool, string, error) // returns (running, status, error)
 	GetNodesInNetwork(context.Context, string) ([]*k3d.Node, error)
 	CreateNetworkIfNotPresent(context.Context, *k3d.ClusterNetwork) (*k3d.ClusterNetwork, bool, error) // @param context, name - @return NETWORK, EXISTS, ERROR
 	GetKubeconfig(context.Context, *k3d.Node) (io.ReadCloser, error)
@@ -76,7 +76,7 @@ type Runtime interface {
 	CopyToNode(context.Context, string, string, *k3d.Node) error               // @param context, source, destination, node
 	WriteToNode(context.Context, []byte, string, os.FileMode, *k3d.Node) error // @param context, content, destination, filemode, node
 	ReadFromNode(context.Context, string, *k3d.Node) (io.ReadCloser, error)    // @param context, filepath, node
-	GetHostIP(context.Context, string) (net.IP, error)
+	GetHostIP(context.Context, string) (netip.Addr, error)
 	ConnectNodeToNetwork(context.Context, *k3d.Node, string) error      // @param context, node, network name
 	DisconnectNodeFromNetwork(context.Context, *k3d.Node, string) error // @param context, node, network name
 	Info() (*runtimeTypes.RuntimeInfo, error)
